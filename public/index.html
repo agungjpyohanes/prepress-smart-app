@@ -1,1099 +1,2167 @@
 <!DOCTYPE html>
+
 <html lang="id">
+
 <head>
+
     <meta charset="UTF-8">
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>Prepress Smart V1.0</title>
+
     
+
     <script src="https://cdn.tailwindcss.com"></script>
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
     
+
     <!-- Firebase SDK (v8) -->
+
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
+
+
     <style>
+
         body { font-family: 'Inter', sans-serif; }
+
         
+
         ::-webkit-scrollbar { width: 6px; height: 6px; }
+
         ::-webkit-scrollbar-track { background: #f1f1f1; }
+
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
+
+
         @media print {
+
             body { background-color: white !important; color: black !important; font-size: 10pt; }
+
             .no-print, sidebar, #sidebar, button, input, .filter-bar { display: none !important; }
+
             .print-only { display: block !important; }
+
             .print-container { width: 100% !important; margin: 0 !important; padding: 0 !important; box-shadow: none !important; border: none !important; }
+
             main { padding: 0 !important; overflow: visible !important; }
+
             table { width: 100% !important; border-collapse: collapse !important; margin-top: 10px; }
+
             th, td { border: 1px solid #333 !important; padding: 6px !important; font-size: 9pt; }
+
             thead { background-color: #eee !important; color: #000 !important; }
+
         }
+
         
+
         .modal-open { overflow: hidden; }
 
+
+
         .loader {
+
             border: 3px solid #f3f3f3;
+
             border-top: 3px solid #3b82f6;
+
             border-radius: 50%;
+
             width: 24px;
+
             height: 24px;
+
             animation: spin 1s linear infinite;
+
         }
+
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
     </style>
+
 </head>
+
 <body class="bg-slate-100 text-slate-800 h-screen flex overflow-hidden">
+
+
 
     <div id="app" class="h-full w-full flex"></div>
 
+
+
     <script>
+
         // KONFIGURASI FIREBASE REALTIME DATABASE
+
         const firebaseConfig = {
+
             databaseURL: "https://prepress-smart-v1-default-rtdb.firebaseio.com/"
+
         };
+
         firebase.initializeApp(firebaseConfig);
+
         const db = firebase.database();
 
-        // ID Google Spreadsheet
-        const GOOGLE_SHEET_ID = '1ogvE_rvBK2awjmEpDkWxkjQ_URehd_OscwyGlhYNZJw';
+
 
         const jopCategories = {
+
             '0': 'K3', '1': 'SCHOOL SUPPLY', '2': 'OFFICE SUPPLY', '3': 'KERTAS SURAT',
+
             '4': 'AMPLOP', '5': 'KERTAS KADO', '6': 'OTHERS', '7': 'JASA',
+
             '8': 'EXPORT', '9': 'KARTON BOX'
+
         };
+
+
 
         const departments = ['CTCP', 'CTP', 'SCREEN', 'FLEXO', 'ETCHING'];
+
         
+
         const dbSheets = {
+
             'CTCP': 'DB_CTCP',
+
             'CTP': 'DB_CTP',
+
             'SCREEN': 'DB_SCREEN',
+
             'FLEXO': 'DB_FLEXO',
+
             'ETCHING': 'DB_ETCHING'
+
         };
+
+
 
         // Pemetaan Istilah per Departemen
+
         const deptTerms = {
+
             'CTCP': 'Plate',
+
             'CTP': 'Plate',
+
             'SCREEN': 'Screen',
+
             'FLEXO': 'Flexo',
+
             'ETCHING': 'Plate'
+
         };
+
+
 
         // Kolom spesifik yang ditampilkan di Tabel Database per Departemen
+
         const deptColumns = {
+
             'CTCP': ['colA', 'colB', 'colC', 'colD', 'colE', 'colF'],
+
             'CTP': ['colA', 'colB', 'colC', 'colD', 'colE', 'colF'],
+
             'SCREEN': ['colA', 'colB', 'colC', 'colD', 'colE', 'colF', 'colG'],
+
             'FLEXO': ['colA', 'colB', 'colC', 'colD', 'colE', 'colF', 'colG', 'colH', 'colI'],
+
             'ETCHING': ['colA', 'colB', 'colC', 'colD', 'colE', 'colF', 'colG', 'colH']
+
         };
+
+
 
         // Label Nama Kolom A - V
+
         const columnLabels = {
+
             colA: 'ID (A)',
+
             colB: 'JOP NAME (B)',
+
             colC: 'NO JOP (C)',
+
             colD: 'NO ITEM (D)',
+
             colE: 'DATE (E)',
+
             colF: 'SHIFT (F)',
+
             colG: 'MESIN EXPOSE (G)',
+
             colH: 'UKURAN (H)',
+
             colI: 'MESIN CETAK (I)',
+
             colJ: 'ITEM BARU (J)',
+
             colK: 'ITEM GANTI (K)',
+
             colL: 'ITEM BAIK (L)',
+
             colM: 'ITEM RUSAK (M)',
+
             colN: 'PENYEBAB GANTI (N)',
+
             colO: 'PERMINTAAN KHUSUS (O)',
+
             colP: 'PENYEBAB RUSAK (P)',
+
             colQ: 'NAMA OP (Q)',
+
             colR: 'NAMA PO (R)',
+
             colS: 'JENIS KERTAS (S)',
+
             colT: 'SEBAB GANTI (T)',
+
             colU: 'SEBAB KHUSUS (U)',
+
             colV: 'SEBAB RUSAK (V)'
+
         };
+
+
 
         const defaultStartDate = '2026-08-01';
+
         const defaultEndDate = '2026-08-31';
 
+
+
         const state = {
+
             userRole: null, 
+
             username: null,
+
             activeMainTab: 'dashboard', 
+
             activeSubTab: 'CTCP', 
+
             startDate: defaultStartDate,
+
             endDate: defaultEndDate,
+
             data: [], 
+
             charts: {},
+
             isFormOpen: false,
+
             formMode: 'add',
+
             isLoading: false,
+
             sidebarOpen: false
+
         };
 
-        async function fetchUsersFromGoogleSheets() {
-            const url = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:json&sheet=DB_USER`;
-            try {
-                const response = await fetch(url);
-                const text = await response.text();
-                // Ekstrak JSON dari response Google Visualization API
-                const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);?/);
-                if (!match || !match[1]) throw new Error("Format respons tidak valid");
-                
-                const jsonData = JSON.parse(match[1]);
-                const users = [];
-                
-                // Parsing Baris (Abaikan baris pertama / header)
-                jsonData.table.rows.forEach(r => {
-                    if (r && r.c) {
-                        const u = r.c[0] ? (r.c[0].f || r.c[0].v) : '';
-                        const role = r.c[1] ? (r.c[1].f || r.c[1].v) : '';
-                        const pass = r.c[2] ? (r.c[2].f || r.c[2].v) : '';
-                        
-                        const parsedUser = String(u).trim();
-                        const parsedRole = String(role).trim().toLowerCase();
-                        const parsedPass = String(pass).trim();
 
-                        // Hindari push baris header
-                        if (parsedUser && parsedUser.toLowerCase() !== 'user' && parsedUser.toLowerCase() !== 'username') { 
-                            users.push({ 
-                                user: parsedUser, 
-                                role: parsedRole, 
-                                pass: parsedPass 
-                            });
-                        }
-                    }
-                });
-                return users;
-            } catch (err) {
-                console.error('Error fetching users from DB_USER:', err);
-                return [];
-            }
-        }
 
         function generateSampleData(dept) {
+
             const term = deptTerms[dept];
+
             return [
+
                 {
+
                     colA: `${dept}-101`, colB: `Buku Kas Sekolah ${term}`, colC: "102394", colD: `PL-${dept}-01`,
+
                     colE: "2026-08-05", colF: "1", colG: "CRON 01", colH: "720x1030", colI: "KBA 01",
+
                     colJ: 10, colK: 1, colL: 9, colM: 1, colN: "Scratch", colO: "Urgent", colP: "Goresan mesin",
+
                     colQ: "Ahmad", colR: "Budi", colS: "HVS 80gr", colT: "Bahan aus", colU: "-", colV: "BBM Kurang"
+
+                },
+
+                {
+
+                    colA: `${dept}-102`, colB: `Amplop Cokelat F4`, colC: "405821", colD: `PL-${dept}-02`,
+
+                    colE: "2026-08-10", colF: "2", colG: "LUSCHER", colH: "650x550", colI: "HEIDELBERG",
+
+                    colJ: 5, colK: 0, colL: 5, colM: 0, colN: "-", colO: "-", colP: "-",
+
+                    colQ: "Cahyono", colR: "Deni", colS: "Kraft 120gr", colT: "-", colU: "-", colV: "-"
+
+                },
+
+                {
+
+                    colA: `${dept}-103`, colB: `Karton Box Ekspor`, colC: "809112", colD: `PL-${dept}-03`,
+
+                    colE: "2026-08-15", colF: "1", colG: "BASYS", colH: "800x1100", colI: "KOMORI",
+
+                    colJ: 8, colK: 2, colL: 6, colM: 2, colN: "Pin hole", colO: "Re-run", colP: "Developer kotor",
+
+                    colQ: "Eko", colR: "Fajar", colS: "Duplex 300gr", colT: "Oksidasi", colU: "-", colV: "Cairan mati"
+
                 }
+
             ];
+
         }
+
+
 
         function fetchData() {
+
             state.isLoading = true;
+
             renderMain(); 
 
+
+
             const nodeName = dbSheets[state.activeSubTab];
+
             
+
             db.ref(nodeName).once('value')
+
                 .then((snapshot) => {
+
                     const rawData = snapshot.val();
+
                     if (rawData && Object.keys(rawData).length > 0) {
+
                         state.data = Object.values(rawData).sort((a, b) => new Date(a.colE) - new Date(b.colE));
+
                     } else {
+
                         // Jika data di database Firebase kosong, gunakan sampel simulasi
+
                         state.data = generateSampleData(state.activeSubTab);
+
                     }
+
                     state.isLoading = false;
+
                     updateContent();
+
                 })
+
                 .catch((error) => {
+
                     showToast("Error loading Firebase data: " + error.message, "error");
+
                     state.data = generateSampleData(state.activeSubTab);
+
                     state.isLoading = false;
+
                     updateContent();
+
                 });
+
         }
+
+
 
         function getItemTerm() {
+
             return deptTerms[state.activeSubTab] || 'Plate';
+
         }
+
+
 
         function persistData(itemObj, isNew, callback) {
+
             const nodeName = dbSheets[state.activeSubTab];
+
             const dataId = itemObj.colA;
 
+
+
             if (!dataId) {
+
                 showToast("ID Data (colA) tidak boleh kosong", "error");
+
                 callback(false);
+
                 return;
+
             }
+
+
 
             db.ref(`${nodeName}/${dataId}`).set(itemObj)
+
                 .then(() => callback(true))
+
                 .catch((error) => {
+
                     console.error("Firebase save error: ", error);
+
                     callback(false);
+
                 });
+
         }
+
+
 
         function removeData(id, callback) {
+
             const nodeName = dbSheets[state.activeSubTab];
 
+
+
             db.ref(`${nodeName}/${id}`).remove()
+
                 .then(() => callback(true))
+
                 .catch((error) => {
+
                     console.error("Firebase delete error: ", error);
+
                     callback(false);
+
                 });
+
         }
+
+
 
         function renderLogin() {
+
             const app = document.getElementById('app');
+
             app.innerHTML = `
+
                 <div class="flex items-center justify-center w-full min-h-screen bg-slate-950 text-white p-4">
+
                     <div class="bg-slate-900 p-6 sm:p-8 rounded-3xl shadow-2xl w-full max-w-md border border-slate-800">
+
                         <div class="text-center mb-6">
+
                             <div class="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-blue-500/30">
+
                                 <span class="text-2xl sm:text-3xl font-extrabold text-white">PS</span>
+
                             </div>
+
                             <h1 class="text-2xl font-bold text-white tracking-tight">Prepress Smart V1.0</h1>
-                            <p class="text-slate-400 text-xs sm:text-sm mt-1">Sistem Otentikasi Terhubung Google Sheets</p>
+
+                            <p class="text-slate-400 text-xs sm:text-sm mt-1">Masukkan Username dan Password untuk masuk</p>
+
                         </div>
+
+
 
                         <!-- Login Form -->
+
                         <form onsubmit="handleLogin(event)" class="space-y-4">
+
                             <div id="login-error" class="hidden p-3 bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs rounded-xl flex items-center gap-2">
+
                                 <i class="fas fa-exclamation-circle text-sm flex-shrink-0"></i>
+
                                 <span id="login-error-msg">Username atau password salah!</span>
+
                             </div>
 
+
+
                             <div>
-                                <label class="block text-xs font-medium text-slate-300 mb-1">Username (Kolom A)</label>
+
+                                <label class="block text-xs font-medium text-slate-300 mb-1">Username</label>
+
                                 <div class="relative">
+
                                     <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500 text-sm"><i class="fas fa-user"></i></span>
+
                                     <input type="text" id="login-username" required placeholder="Masukkan username" 
+
                                         class="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-slate-500">
+
                                 </div>
+
                             </div>
+
+
 
                             <div>
-                                <label class="block text-xs font-medium text-slate-300 mb-1">Password (Kolom C)</label>
+
+                                <label class="block text-xs font-medium text-slate-300 mb-1">Password</label>
+
                                 <div class="relative">
+
                                     <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500 text-sm"><i class="fas fa-lock"></i></span>
+
                                     <input type="password" id="login-password" required placeholder="••••••••" 
+
                                         class="w-full pl-10 pr-10 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-slate-500">
+
                                     <button type="button" onclick="togglePasswordVisibility()" class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-500 hover:text-slate-300 text-sm">
+
                                         <i id="password-toggle-icon" class="fas fa-eye"></i>
+
                                     </button>
+
                                 </div>
+
                             </div>
 
-                            <button type="submit" id="btn-login-submit" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl shadow-lg shadow-blue-600/30 transition-all flex items-center justify-center gap-2 text-sm mt-4">
+
+
+                            <div>
+
+                                <label class="block text-xs font-medium text-slate-300 mb-1">Role / Jabatan</label>
+
+                                <select id="login-role" class="w-full px-3.5 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all">
+
+                                    <option value="manager">Manager</option>
+
+                                    <option value="supervisor">Supervisor</option>
+
+                                    <option value="koordinator">Koordinator</option>
+
+                                    <option value="operator">Operator</option>
+
+                                    <option value="umum">Umum (Read Only)</option>
+
+                                </select>
+
+                            </div>
+
+
+
+                            <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl shadow-lg shadow-blue-600/30 transition-all flex items-center justify-center gap-2 text-sm mt-2">
+
                                 <span>Masuk ke Sistem</span>
+
                                 <i class="fas fa-arrow-right text-xs"></i>
+
                             </button>
+
                         </form>
+
+
+
+                        <!-- Demo Credentials Quick Fill -->
+
+                        <div class="mt-6 pt-5 border-t border-slate-800">
+
+                            <p class="text-[11px] text-slate-400 font-medium mb-2 text-center uppercase tracking-wider">Uji Coba Cepat (Klik Akun Demo)</p>
+
+                            <div class="grid grid-cols-2 gap-1.5 sm:gap-2">
+
+                                ${[
+
+                                    { role: 'manager', user: 'manager', label: 'Manager' },
+
+                                    { role: 'supervisor', user: 'supervisor', label: 'Supervisor' },
+
+                                    { role: 'koordinator', user: 'koordinator', label: 'Koordinator' },
+
+                                    { role: 'operator', user: 'operator', label: 'Operator' },
+
+                                    { role: 'umum', user: 'umum', label: 'Umum' }
+
+                                ].map(acc => `
+
+                                    <button type="button" onclick="fillDemoAccount('${acc.user}', '${acc.role}')" 
+
+                                        class="py-2 px-2.5 bg-slate-800/80 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium text-left transition-colors border border-slate-700/60 truncate flex items-center justify-between">
+
+                                        <span class="truncate">${acc.label}</span>
+
+                                        <i class="fas fa-user-check text-[10px] text-blue-400 ml-1"></i>
+
+                                    </button>
+
+                                `).join('')}
+
+                            </div>
+
+                        </div>
+
                     </div>
+
                 </div>
+
             `;
+
         }
+
+
+
+        function fillDemoAccount(username, role) {
+
+            document.getElementById('login-username').value = username;
+
+            document.getElementById('login-password').value = '123456';
+
+            document.getElementById('login-role').value = role;
+
+            
+
+            // Sembunyikan error jika sebelumnya ada
+
+            const errDiv = document.getElementById('login-error');
+
+            if(errDiv) errDiv.classList.add('hidden');
+
+        }
+
+
 
         function togglePasswordVisibility() {
+
             const passInput = document.getElementById('login-password');
+
             const icon = document.getElementById('password-toggle-icon');
+
             if (passInput.type === 'password') {
+
                 passInput.type = 'text';
+
                 icon.classList.remove('fa-eye');
+
                 icon.classList.add('fa-eye-slash');
+
             } else {
+
                 passInput.type = 'password';
+
                 icon.classList.remove('fa-eye-slash');
+
                 icon.classList.add('fa-eye');
+
             }
+
         }
 
-        async function handleLogin(e) {
-            e.preventDefault();
-            const usernameInput = document.getElementById('login-username').value.trim();
-            const passwordInput = document.getElementById('login-password').value.trim();
-            const errDiv = document.getElementById('login-error');
-            const submitBtn = document.getElementById('btn-login-submit');
 
-            if (!usernameInput || !passwordInput) {
+
+        function handleLogin(e) {
+
+            e.preventDefault();
+
+            const username = document.getElementById('login-username').value.trim();
+
+            const password = document.getElementById('login-password').value.trim();
+
+            const role = document.getElementById('login-role').value;
+
+            const errDiv = document.getElementById('login-error');
+
+
+
+            if (!username || !password) {
+
                 document.getElementById('login-error-msg').innerText = "Harap isi Username dan Password!";
+
                 errDiv.classList.remove('hidden');
+
                 return;
+
             }
+
+
 
             // Menerima input password minimal 4 karakter
-            if (passwordInput.length < 4) {
+
+            if (password.length < 4) {
+
                 document.getElementById('login-error-msg').innerText = "Password minimal 4 karakter!";
+
                 errDiv.classList.remove('hidden');
+
                 return;
+
             }
 
-            // Ubah state UI ke loading
+
+
             errDiv.classList.add('hidden');
-            const originalBtnHtml = submitBtn.innerHTML;
-            submitBtn.disabled = true;
-            submitBtn.classList.replace('bg-blue-600', 'bg-blue-800');
-            submitBtn.innerHTML = `<div class="loader !w-4 !h-4 !border-2"></div><span class="ml-2">Memeriksa Database DB_USER...</span>`;
 
-            // Ambil data user dari Google Sheets
-            const users = await fetchUsersFromGoogleSheets();
-            
-            // Verifikasi akun
-            const matchedUser = users.find(u => 
-                u.user.toLowerCase() === usernameInput.toLowerCase() && 
-                u.pass === passwordInput
-            );
+            state.username = username;
 
-            if (matchedUser) {
-                state.username = matchedUser.user;
-                state.userRole = matchedUser.role || 'operator';
-                showToast(`Selamat datang, ${state.username} (${state.userRole})`, 'success');
-                fetchData();
-            } else {
-                // Jika login gagal kembalikan state button
-                submitBtn.disabled = false;
-                submitBtn.classList.replace('bg-blue-800', 'bg-blue-600');
-                submitBtn.innerHTML = originalBtnHtml;
-                document.getElementById('login-error-msg').innerText = "Username atau password salah / tidak ditemukan di DB_USER!";
-                errDiv.classList.remove('hidden');
-            }
+            state.userRole = role;
+
+            fetchData();
+
         }
+
+
 
         function logout() {
+
             state.userRole = null;
+
             state.username = null;
+
             state.sidebarOpen = false;
+
             renderLogin();
+
         }
+
+
 
         function renderMain() {
+
             const app = document.getElementById('app');
+
             app.innerHTML = `
+
                 <!-- Backdrop Overlay for Mobile/Tablet Sidebar Drawer -->
+
                 <div id="sidebar-backdrop" onclick="toggleSidebar(false)" 
+
                     class="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-30 transition-opacity duration-300 ${state.sidebarOpen ? 'opacity-100 block' : 'opacity-0 hidden'} lg:hidden">
+
                 </div>
+
+
 
                 <!-- RESPONSIVE LEFT SIDEBAR -->
+
                 <aside id="sidebar" 
+
                     class="no-print fixed lg:static inset-y-0 left-0 bg-slate-900 text-slate-300 w-64 flex-shrink-0 flex flex-col justify-between border-r border-slate-800 transition-transform duration-300 ease-in-out z-40 ${state.sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}">
+
                     <div>
+
                         <!-- Sidebar Header -->
+
                         <div class="p-4 sm:p-5 border-b border-slate-800 flex items-center justify-between">
+
                             <div class="flex items-center gap-3">
+
                                 <div class="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold text-lg shadow-md shadow-blue-500/20">PS</div>
+
                                 <div>
+
                                     <h1 class="font-bold text-white text-base leading-tight">Prepress Smart</h1>
+
                                     <span class="text-xs text-blue-400 font-mono">v1.0</span>
+
                                 </div>
+
                             </div>
+
                             <!-- Close button for mobile -->
+
                             <button onclick="toggleSidebar(false)" class="lg:hidden text-slate-400 hover:text-white p-1.5 rounded-lg border border-slate-800">
+
                                 <i class="fas fa-times"></i>
+
                             </button>
+
                         </div>
+
+
 
                         <!-- Sidebar Menu -->
+
                         <div class="p-4 space-y-6 overflow-y-auto max-h-[calc(100vh-140px)]">
+
                             <!-- Section: Dashboard -->
+
                             <div>
+
                                 <div class="px-3 mb-2 text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+
                                     <i class="fas fa-chart-pie text-blue-400"></i> Dashboard
+
                                 </div>
+
                                 <div class="space-y-1">
+
                                     ${departments.map(dept => `
+
                                         <button onclick="switchTab('dashboard', '${dept}')" 
+
                                             class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${state.activeMainTab === 'dashboard' && state.activeSubTab === dept ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20' : 'hover:bg-slate-800 text-slate-400 hover:text-slate-200'}">
+
                                             <span>${dept}</span>
+
                                             <span class="text-[10px] px-1.5 py-0.5 rounded ${state.activeMainTab === 'dashboard' && state.activeSubTab === dept ? 'bg-blue-700 text-white' : 'bg-slate-800 text-slate-400'}">${deptTerms[dept]}</span>
+
                                         </button>
+
                                     `).join('')}
+
                                 </div>
+
                             </div>
+
+
 
                             <!-- Section: Database -->
+
                             <div>
+
                                 <div class="px-3 mb-2 text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+
                                     <i class="fas fa-database text-emerald-400"></i> Database
+
                                 </div>
+
                                 <div class="space-y-1">
+
                                     ${departments.map(dept => `
+
                                         <button onclick="switchTab('database', '${dept}')" 
+
                                             class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${state.activeMainTab === 'database' && state.activeSubTab === dept ? 'bg-emerald-600 text-white shadow-md shadow-emerald-500/20' : 'hover:bg-slate-800 text-slate-400 hover:text-slate-200'}">
+
                                             <span>${dept}</span>
+
                                             <span class="text-[10px] px-1.5 py-0.5 rounded ${state.activeMainTab === 'database' && state.activeSubTab === dept ? 'bg-emerald-700 text-white' : 'bg-slate-800 text-slate-400'}">${deptTerms[dept]}</span>
+
                                         </button>
+
                                     `).join('')}
+
                                 </div>
+
                             </div>
+
                         </div>
+
                     </div>
+
+
 
                     <!-- Sidebar Footer -->
+
                     <div class="p-4 border-t border-slate-800 bg-slate-950/60">
+
                         <div class="flex items-center justify-between gap-2">
+
                             <div class="flex items-center gap-2.5 min-w-0">
+
                                 <div class="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-300 flex-shrink-0">
+
                                     <i class="fas fa-user text-xs"></i>
+
                                 </div>
+
                                 <div class="truncate">
+
                                     <p class="text-xs font-semibold text-white truncate">${state.username || 'Pengguna'}</p>
-                                    <p class="text-[10px] text-blue-400 capitalize truncate">${state.userRole || 'Role'}</p>
+
+                                    <p class="text-[10px] text-blue-400 capitalize truncate">${state.userRole}</p>
+
                                 </div>
+
                             </div>
+
                             <button onclick="logout()" class="text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 p-2 rounded-lg transition-colors flex-shrink-0" title="Keluar">
+
                                 <i class="fas fa-sign-out-alt"></i>
+
                             </button>
+
                         </div>
+
                     </div>
+
                 </aside>
 
+
+
                 <!-- MAIN CONTENT AREA -->
+
                 <div class="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
+
                     <!-- Top Bar Navbar (No Print) -->
+
                     <header class="no-print bg-white border-b border-slate-200 px-4 sm:px-6 py-3 flex justify-between items-center z-20 flex-shrink-0">
+
                         <div class="flex items-center gap-3 min-w-0">
+
                             <!-- Toggle Button for Mobile/Tablet -->
+
                             <button onclick="toggleSidebar(true)" class="lg:hidden text-slate-600 hover:text-slate-900 p-2 rounded-xl border border-slate-200 hover:bg-slate-50 transition-colors flex items-center justify-center">
+
                                 <i class="fas fa-bars text-lg"></i>
+
                             </button>
+
                             <h2 class="text-base sm:text-lg font-bold text-slate-800 capitalize flex items-center gap-2 truncate">
+
                                 <span class="text-blue-600">${state.activeMainTab}</span>
+
                                 <i class="fas fa-chevron-right text-xs text-slate-400"></i>
+
                                 <span class="bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-md text-xs sm:text-sm border truncate">${state.activeSubTab}</span>
+
                             </h2>
+
                         </div>
+
                         <div class="flex items-center gap-2">
+
                             <span class="hidden sm:inline-block text-xs text-slate-500 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
+
                                 Node: <strong class="text-slate-700 font-mono">${dbSheets[state.activeSubTab]}</strong>
+
                             </span>
+
                         </div>
+
                     </header>
 
+
+
                     <!-- Dynamic Body Content -->
+
                     <main id="main-content" class="flex-1 overflow-y-auto bg-slate-50 p-3 sm:p-6 relative">
+
                         ${state.isLoading ? `
+
                             <div class="absolute inset-0 flex flex-col items-center justify-center bg-slate-50/90 z-20 backdrop-blur-xs">
+
                                 <div class="loader mb-3"></div>
+
                                 <p class="text-slate-600 text-sm font-medium">Mengambil data dari Firebase (${dbSheets[state.activeSubTab]})...</p>
+
                             </div>
+
                         ` : ''}
+
                     </main>
+
                 </div>
+
+
 
                 <div id="modal-container"></div>
+
             `;
+
             if(!state.isLoading) updateContent();
+
         }
+
+
 
         function toggleSidebar(open) {
+
             state.sidebarOpen = open !== undefined ? open : !state.sidebarOpen;
+
             const sidebar = document.getElementById('sidebar');
+
             const backdrop = document.getElementById('sidebar-backdrop');
+
             
+
             if (sidebar && backdrop) {
+
                 if (state.sidebarOpen) {
+
                     sidebar.classList.remove('-translate-x-full');
+
                     sidebar.classList.add('translate-x-0');
+
                     backdrop.classList.remove('hidden', 'opacity-0');
+
                     backdrop.classList.add('block', 'opacity-100');
+
                 } else {
+
                     sidebar.classList.remove('translate-x-0');
+
                     sidebar.classList.add('-translate-x-full');
+
                     backdrop.classList.remove('block', 'opacity-100');
+
                     backdrop.classList.add('hidden', 'opacity-0');
+
                 }
+
             }
+
         }
+
+
 
         function switchTab(mainTab, subTab) {
+
             state.activeMainTab = mainTab;
+
             // On mobile screen sizes, automatically close sidebar after choosing tab
+
             if (window.innerWidth < 1024) {
+
                 toggleSidebar(false);
+
             }
+
+
 
             if (subTab && state.activeSubTab !== subTab) {
+
                 state.activeSubTab = subTab;
+
                 fetchData();
+
             } else {
+
                 renderMain();
+
             }
+
         }
+
+
 
         function updateContent() {
+
             const container = document.getElementById('main-content');
+
             if (state.activeMainTab === 'dashboard') renderDashboard(container);
+
             else if (state.activeMainTab === 'database') renderDatabase(container);
+
         }
+
+
 
         function getFilteredData() {
+
             if (!state.startDate || !state.endDate) return state.data;
+
             const start = new Date(state.startDate);
+
             const end = new Date(state.endDate);
+
             end.setHours(23, 59, 59); 
+
             
+
             return state.data.filter(d => {
+
                 if(!d.colE) return false;
+
                 const itemDate = new Date(d.colE);
+
                 return itemDate >= start && itemDate <= end;
+
             });
+
         }
+
+
 
         function resetDateFilter() {
+
             state.startDate = defaultStartDate;
+
             state.endDate = defaultEndDate;
+
             updateContent();
+
             showToast("Filter tanggal telah direset", "info");
+
         }
+
+
 
         function renderDashboard(container) {
+
             const filteredData = getFilteredData();
+
             const term = getItemTerm();
+
             
+
             const totalBaik = filteredData.reduce((sum, item) => sum + (Number(item.colL) || 0), 0);
+
             const totalRusak = filteredData.reduce((sum, item) => sum + (Number(item.colM) || 0), 0);
+
             const totalGanti = filteredData.reduce((sum, item) => sum + (Number(item.colK) || 0), 0);
+
             const totalPenggunaan = totalBaik + totalRusak + totalGanti;
+
             const pctRusak = totalPenggunaan > 0 ? ((totalRusak / totalPenggunaan) * 100).toFixed(1) : 0;
 
+
+
             container.innerHTML = `
+
                 <div class="max-w-7xl mx-auto space-y-6">
+
                     <!-- Filter Bar -->
+
                     <div class="flex flex-wrap justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-slate-200 no-print">
+
                         <div>
+
                             <h2 class="text-lg font-bold text-slate-800"><i class="fas fa-chart-line text-blue-500 mr-2"></i> Dashboard Kinerja - ${state.activeSubTab}</h2>
+
                             <p class="text-xs text-slate-500">Istilah unit yang digunakan: <strong class="text-blue-600">${term}</strong></p>
+
                         </div>
+
                         <div class="flex flex-wrap items-center gap-2 mt-3 sm:mt-0 filter-bar">
+
                             <input type="date" id="dash-start-date" value="${state.startDate}" class="p-2 border rounded-lg text-sm bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none">
+
                             <span class="text-slate-400 text-sm">s/d</span>
+
                             <input type="date" id="dash-end-date" value="${state.endDate}" class="p-2 border rounded-lg text-sm bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none">
+
                             <button onclick="applyDateFilter()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors">
+
                                 <i class="fas fa-filter mr-1"></i> Filter
+
                             </button>
+
                             <button onclick="resetDateFilter()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-2 rounded-lg text-sm font-medium transition-colors" title="Reset Filter">
+
                                 <i class="fas fa-undo mr-1"></i> Reset
+
                             </button>
+
                         </div>
+
                     </div>
+
+
 
                     <!-- Summary Cards -->
+
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+
                         ${createCard(`Total ${term} Baik`, totalBaik, 'pcs', 'fa-check-circle', 'text-emerald-500', 'bg-emerald-50', 'baik')}
+
                         ${createCard(`Total ${term} Rusak`, totalRusak, 'pcs', 'fa-times-circle', 'text-rose-500', 'bg-rose-50', 'rusak')}
+
                         ${createCard(`Total ${term} Ganti`, totalGanti, 'pcs', 'fa-sync', 'text-amber-500', 'bg-amber-50', 'ganti')}
+
                         ${createCard('Total Penggunaan', totalPenggunaan, 'pcs', 'fa-layer-group', 'text-blue-500', 'bg-blue-50', 'penggunaan')}
+
                         ${createCard('Persentase Rusak', pctRusak, '%', 'fa-percent', 'text-purple-500', 'bg-purple-50', 'persentase')}
+
                     </div>
+
+
 
                     <!-- Charts Grid -->
+
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
                         <div class="lg:col-span-3 bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+
                             <div class="flex justify-between items-center mb-4 pb-2 border-b">
+
                                 <h3 class="font-semibold text-slate-700">Grafik Penggunaan ${term} Harian</h3>
+
                                 <span class="text-xs text-blue-500 bg-blue-50 px-2 py-1 rounded"><i class="fas fa-mouse-pointer mr-1"></i>Klik poin grafik untuk detail</span>
+
                             </div>
+
                             <div class="h-72"><canvas id="chartDaily"></canvas></div>
+
                         </div>
+
                         <div class="lg:col-span-2 bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+
                             <div class="flex justify-between items-center mb-4 pb-2 border-b">
+
                                 <h3 class="font-semibold text-slate-700">Kategori JOP</h3>
+
                                 <span class="text-xs text-purple-500 bg-purple-50 px-2 py-1 rounded"><i class="fas fa-mouse-pointer mr-1"></i>Klik batang untuk detail</span>
+
                             </div>
+
                             <div class="h-80"><canvas id="chartJop"></canvas></div>
+
                         </div>
+
                         <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+
                             <div class="flex justify-between items-center mb-4 pb-2 border-b">
+
                                 <h3 class="font-semibold text-slate-700">Mesin Expose</h3>
+
                                 <span class="text-xs text-emerald-500 bg-emerald-50 px-2 py-1 rounded"><i class="fas fa-mouse-pointer mr-1"></i>Klik diagram</span>
+
                             </div>
+
                             <div class="h-80"><canvas id="chartMesin"></canvas></div>
+
                         </div>
+
                     </div>
+
                 </div>
+
             `;
+
             setTimeout(() => initCharts(filteredData), 50);
+
         }
+
+
 
         function createCard(title, value, unit, icon, iconColor, bgColor, type) {
+
             return `
+
                 <div onclick="showCardDetail('${type}')" class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200 flex flex-col relative overflow-hidden hover:shadow-md hover:border-blue-300 transition-all cursor-pointer group">
+
                     <div class="flex justify-between items-start z-10">
+
                         <div>
+
                             <p class="text-xs font-medium text-slate-500 mb-1 uppercase tracking-wide">${title}</p>
+
                             <h3 class="text-2xl font-bold text-slate-800 group-hover:text-blue-600 transition-colors">${value.toLocaleString()} <span class="text-xs text-slate-400 font-normal">${unit}</span></h3>
+
                         </div>
+
                         <div class="w-10 h-10 rounded-xl ${bgColor} flex items-center justify-center group-hover:scale-110 transition-transform">
+
                             <i class="fas ${icon} ${iconColor} text-lg"></i>
+
                         </div>
+
                     </div>
+
                     <div class="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+
                         <span>Lihat Rincian</span>
+
                         <i class="fas fa-arrow-right text-slate-300 group-hover:text-blue-500 transition-colors"></i>
+
                     </div>
+
                 </div>
+
             `;
+
         }
+
+
 
         function applyDateFilter() {
+
             state.startDate = document.getElementById('dash-start-date').value;
+
             state.endDate = document.getElementById('dash-end-date').value;
+
             updateContent();
+
         }
+
+
 
         function initCharts(data) {
+
             Object.values(state.charts).forEach(chart => chart.destroy());
+
             state.charts = {};
 
+
+
             const term = getItemTerm();
+
+
 
             // 1. Chart Daily
+
             const dailyMap = {};
+
             data.forEach(d => {
+
                 const date = d.colE;
+
                 if(!date) return;
+
                 dailyMap[date] = (dailyMap[date] || 0) + (Number(d.colL)||0) + (Number(d.colK)||0) + (Number(d.colM)||0);
+
             });
+
             const sortedDates = Object.keys(dailyMap).sort();
+
             
+
             const dailyCanvas = document.getElementById('chartDaily');
+
             if(dailyCanvas) {
+
                 state.charts.daily = new Chart(dailyCanvas, {
+
                     type: 'line',
+
                     data: {
+
                         labels: sortedDates,
+
                         datasets: [{ 
+
                             label: `Penggunaan ${term}`, 
+
                             data: sortedDates.map(date => dailyMap[date]), 
+
                             borderColor: '#3b82f6', 
+
                             backgroundColor: 'rgba(59, 130, 246, 0.1)', 
+
                             fill: true, 
+
                             tension: 0.3,
+
                             pointRadius: 5,
+
                             pointHoverRadius: 8
+
                         }]
+
                     },
+
                     options: { 
+
                         responsive: true, 
+
                         maintainAspectRatio: false, 
+
                         plugins: { legend: { display: false } },
+
                         onClick: (e, elements) => {
+
                             if (elements.length > 0) {
+
                                 const index = elements[0].index;
+
                                 const clickedDate = sortedDates[index];
+
                                 const items = data.filter(d => d.colE === clickedDate);
+
                                 showDetailModal(`Detail Penggunaan ${term} Tanggal: ${clickedDate}`, items);
+
                             }
+
                         }
+
                     }
+
                 });
+
             }
+
+
 
             // 2. Chart JOP Categories
+
             const jopMap = {};
+
             data.forEach(d => {
+
                 const category = jopCategories[String(d.colC).charAt(0)] || 'OTHERS';
+
                 jopMap[category] = (jopMap[category] || 0) + 1;
+
             });
+
             const jopCanvas = document.getElementById('chartJop');
+
             if(jopCanvas) {
+
                 const categories = Object.keys(jopMap);
+
                 state.charts.jop = new Chart(jopCanvas, {
+
                     type: 'bar',
+
                     data: {
+
                         labels: categories,
+
                         datasets: [{ label: 'Jumlah Transaksi', data: Object.values(jopMap), backgroundColor: '#8b5cf6', borderRadius: 6 }]
+
                     },
+
                     options: { 
+
                         indexAxis: 'y', 
+
                         responsive: true, 
+
                         maintainAspectRatio: false,
+
                         onClick: (e, elements) => {
+
                             if (elements.length > 0) {
+
                                 const index = elements[0].index;
+
                                 const category = categories[index];
+
                                 const items = data.filter(d => (jopCategories[String(d.colC).charAt(0)] || 'OTHERS') === category);
+
                                 showDetailModal(`Detail Kategori JOP: ${category}`, items);
+
                             }
+
                         }
+
                     }
+
                 });
+
             }
+
+
 
             // 3. Chart Mesin Expose
+
             const mesinMap = {};
+
             data.forEach(d => {
+
                 const m = d.colG || 'Tidak Diketahui';
+
                 mesinMap[m] = (mesinMap[m] || 0) + 1;
+
             });
+
             const mesinCanvas = document.getElementById('chartMesin');
+
             if(mesinCanvas) {
+
                 const mesinList = Object.keys(mesinMap);
+
                 state.charts.mesin = new Chart(mesinCanvas, {
+
                     type: 'doughnut',
+
                     data: {
+
                         labels: mesinList,
+
                         datasets: [{ data: Object.values(mesinMap), backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'], borderWidth: 0 }]
+
                     },
+
                     options: { 
+
                         responsive: true, 
+
                         maintainAspectRatio: false, 
+
                         cutout: '65%',
+
                         onClick: (e, elements) => {
+
                             if (elements.length > 0) {
+
                                 const index = elements[0].index;
+
                                 const mesinName = mesinList[index];
+
                                 const items = data.filter(d => (d.colG || 'Tidak Diketahui') === mesinName);
+
                                 showDetailModal(`Detail Mesin Expose: ${mesinName}`, items);
+
                             }
+
                         }
+
                     }
+
                 });
+
             }
+
         }
+
+
 
         function showCardDetail(type) {
+
             const data = getFilteredData();
+
             const term = getItemTerm();
+
             let items = [];
+
             let title = '';
 
+
+
             if (type === 'baik') {
+
                 title = `Daftar ${term} Baik`;
+
                 items = data.filter(d => Number(d.colL) > 0);
+
             } else if (type === 'rusak') {
+
                 title = `Daftar ${term} Rusak`;
+
                 items = data.filter(d => Number(d.colM) > 0);
+
             } else if (type === 'ganti') {
+
                 title = `Daftar ${term} Ganti`;
+
                 items = data.filter(d => Number(d.colK) > 0);
+
             } else {
+
                 title = `Seluruh Transaksi Penggunaan ${term}`;
+
                 items = data;
+
             }
 
+
+
             showDetailModal(title, items);
+
         }
+
+
 
         function showDetailModal(title, items) {
+
             const cols = deptColumns[state.activeSubTab];
+
             const modalHtml = `
+
                 <div id="detail-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onclick="closeModal(event, 'detail-modal')">
+
                     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[85vh] flex flex-col overflow-hidden" onclick="event.stopPropagation()">
+
                         <div class="px-6 py-4 border-b flex justify-between items-center bg-slate-50">
+
                             <div>
+
                                 <h3 class="text-lg font-bold text-slate-800"><i class="fas fa-list-alt text-blue-500 mr-2"></i> ${title}</h3>
+
                                 <p class="text-xs text-slate-500">Ditemukan ${items.length} data detail</p>
+
                             </div>
+
                             <button onclick="closeModal(null, 'detail-modal')" class="text-slate-400 hover:text-rose-600 p-1"><i class="fas fa-times text-xl"></i></button>
+
                         </div>
+
                         <div class="overflow-auto flex-1 p-6">
+
                             <table class="w-full text-left text-sm whitespace-nowrap">
+
                                 <thead class="bg-slate-100 border-b text-slate-600 sticky top-0">
+
                                     <tr>
+
                                         ${cols.map(c => `<th class="py-2.5 px-3 font-semibold">${columnLabels[c]}</th>`).join('')}
+
                                         <th class="py-2.5 px-3 font-semibold text-center">BAIK</th>
+
                                         <th class="py-2.5 px-3 font-semibold text-center">RUSAK</th>
+
                                     </tr>
+
                                 </thead>
+
                                 <tbody class="divide-y divide-slate-100">
+
                                     ${items.length === 0 ? `<tr><td colspan="${cols.length + 2}" class="text-center py-8 text-slate-400">Tidak ada data rincian.</td></tr>` : ''}
+
                                     ${items.map(row => `
+
                                         <tr class="hover:bg-slate-50 transition-colors cursor-pointer" onclick="openFullRowDetail('${row.colA}')">
+
                                             ${cols.map(c => `<td class="py-2.5 px-3">${row[c] || '-'}</td>`).join('')}
+
                                             <td class="py-2.5 px-3 text-center text-emerald-600 font-bold">${row.colL || 0}</td>
+
                                             <td class="py-2.5 px-3 text-center text-rose-600 font-bold">${row.colM || 0}</td>
+
                                         </tr>
+
                                     `).join('')}
+
                                 </tbody>
+
                             </table>
+
                         </div>
+
                         <div class="px-6 py-3 bg-slate-50 border-t flex justify-between items-center text-xs text-slate-500">
+
                             <span>* Klik pada salah satu baris untuk melihat seluruh data lengkap A-V</span>
+
                             <button onclick="closeModal(null, 'detail-modal')" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 font-medium">Tutup</button>
+
                         </div>
+
                     </div>
+
                 </div>
+
             `;
+
             document.getElementById('modal-container').innerHTML = modalHtml;
+
             document.body.classList.add('modal-open');
+
         }
+
+
 
         function renderDatabase(container) {
+
             const isReadOnly = state.userRole === 'umum';
+
             const cols = deptColumns[state.activeSubTab];
+
             const term = getItemTerm();
+
             
+
             container.innerHTML = `
+
                 <div class="max-w-7xl mx-auto h-full flex flex-col print-container">
+
                     <!-- Database Header Actions -->
+
                     <div class="flex flex-wrap justify-between items-center mb-6 gap-4 no-print">
+
                         <div>
+
                             <h2 class="text-xl font-bold text-slate-800"><i class="fas fa-database text-emerald-500 mr-2"></i> Database JOP - ${state.activeSubTab}</h2>
+
                             <p class="text-sm text-slate-500 mt-0.5">Menampilkan kolom <strong class="text-slate-700 font-mono">${cols[0].replace('col','')} - ${cols[cols.length-1].replace('col','')}</strong> untuk departemen <strong class="text-blue-600">${state.activeSubTab} (${term})</strong></p>
+
                         </div>
+
                         <div class="flex items-center gap-2">
+
                             <button onclick="printDatabase()" class="bg-slate-700 hover:bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm flex items-center transition-colors">
+
                                 <i class="fas fa-print mr-2"></i> Print Database
+
                             </button>
+
                             ${!isReadOnly ? `
+
                                 <button onclick="openForm('add')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm flex items-center transition-colors">
+
                                     <i class="fas fa-plus mr-2"></i> Tambah Data
+
                                 </button>
+
                             ` : ''}
+
                         </div>
+
                     </div>
+
+
 
                     <!-- Print Title Header (Visible only when printing) -->
+
                     <div class="hidden print-only mb-4">
+
                         <h1 class="text-xl font-bold">PREPRESS SMART V1.0 - LAPORAN DATABASE ${state.activeSubTab}</h1>
+
                         <p class="text-sm">Dicetak pada: ${new Date().toLocaleString('id-ID')} | Total Record: ${state.data.length}</p>
+
                     </div>
+
+
 
                     <!-- Table Container -->
+
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex-1 flex flex-col">
+
                         <div class="overflow-x-auto flex-1">
+
                             <table class="w-full text-left text-sm whitespace-nowrap">
+
                                 <thead class="bg-slate-50 border-b border-slate-200 text-slate-600 sticky top-0 z-10">
+
                                     <tr>
+
                                         ${cols.map(colKey => `<th class="py-3 px-4 font-semibold">${columnLabels[colKey]}</th>`).join('')}
+
                                         ${!isReadOnly ? `<th class="py-3 px-4 font-semibold text-right sticky right-0 bg-slate-50 no-print">Aksi</th>` : ''}
+
                                     </tr>
+
                                 </thead>
+
                                 <tbody class="divide-y divide-slate-100">
+
                                     ${state.data.length === 0 ? `<tr><td colspan="${cols.length + 1}" class="text-center py-12 text-slate-400">Tidak ada data tersimpan di Firebase.</td></tr>` : ''}
+
                                     ${state.data.map((row, index) => `
+
                                         <tr class="hover:bg-blue-50/60 transition-colors cursor-pointer group" onclick="openFullRowDetailByIndex(${index})">
+
                                             ${cols.map(colKey => `
+
                                                 <td class="py-3 px-4 ${colKey==='colA'?'font-mono text-xs text-slate-500':''} ${colKey==='colC'?'font-medium text-blue-600':''}">
+
                                                     ${row[colKey] || '-'}
+
                                                 </td>
+
                                             `).join('')}
+
                                             ${!isReadOnly ? `
+
                                                 <td class="py-2 px-4 text-right sticky right-0 bg-white group-hover:bg-blue-50/60 no-print" onclick="event.stopPropagation()">
+
                                                     <button onclick="openForm('edit', ${index})" class="text-amber-500 hover:bg-amber-100 p-2 rounded-lg transition-colors" title="Edit"><i class="fas fa-edit"></i></button>
+
                                                     <button onclick="confirmDelete(${index})" class="text-rose-500 hover:bg-rose-100 p-2 rounded-lg transition-colors" title="Hapus"><i class="fas fa-trash-alt"></i></button>
+
                                                 </td>
+
                                             ` : ''}
+
                                         </tr>
+
                                     `).join('')}
+
                                 </tbody>
+
                             </table>
+
                         </div>
+
                     </div>
+
                 </div>
+
             `;
+
         }
+
+
 
         function printDatabase() {
+
             window.print();
+
         }
+
+
 
         function openFullRowDetailByIndex(index) {
+
             const item = state.data[index];
+
             if(item) openFullRowDetail(item.colA);
+
         }
 
+
+
         function openFullRowDetail(id) {
+
             const item = state.data.find(d => d.colA === id);
+
             if(!item) return;
+
+
 
             const allCols = ['colA','colB','colC','colD','colE','colF','colG','colH','colI','colJ','colK','colL','colM','colN','colO','colP','colQ','colR','colS','colT','colU','colV'];
 
+
+
             const modalHtml = `
+
                 <div id="full-detail-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4" onclick="closeModal(event, 'full-detail-modal')">
+
                     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden" onclick="event.stopPropagation()">
+
                         <div class="px-6 py-4 border-b flex justify-between items-center bg-slate-800 text-white">
+
                             <div>
+
                                 <h3 class="text-lg font-bold"><i class="fas fa-file-alt text-blue-400 mr-2"></i> Rincian Lengkap Data (A - V)</h3>
+
                                 <p class="text-xs text-slate-300">ID Data: ${item.colA || '-'}</p>
+
                             </div>
+
                             <button onclick="closeModal(null, 'full-detail-modal')" class="text-slate-400 hover:text-white p-1"><i class="fas fa-times text-xl"></i></button>
+
                         </div>
+
                         <div class="overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50">
+
                             ${allCols.map(key => `
+
                                 <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs flex flex-col">
+
                                     <span class="text-[11px] font-semibold text-slate-400 uppercase">${columnLabels[key]}</span>
+
                                     <span class="text-sm font-medium text-slate-800 mt-1">${item[key] !== undefined && item[key] !== '' ? item[key] : '-'}</span>
+
                                 </div>
+
                             `).join('')}
+
                         </div>
+
                         <div class="px-6 py-3 bg-white border-t flex justify-end">
+
                             <button onclick="closeModal(null, 'full-detail-modal')" class="px-5 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900 font-medium text-sm">Tutup</button>
+
                         </div>
+
                     </div>
+
                 </div>
+
             `;
+
             document.getElementById('modal-container').insertAdjacentHTML('beforeend', modalHtml);
+
             document.body.classList.add('modal-open');
+
         }
 
+
+
         function openForm(mode, index = null) {
+
             state.formMode = mode;
+
             let item = {};
+
             
+
             if (mode === 'edit' && index !== null) {
+
                 item = state.data[index];
+
                 state.editIndex = index;
+
             } else {
+
                 item = { 
+
                     colE: new Date().toISOString().split('T')[0],
+
                     colA: `${state.activeSubTab}-${Date.now().toString().slice(-5)}` 
+
                 };
+
             }
+
+
 
             const term = getItemTerm();
 
+
+
             const formHtml = `
+
                 <div id="form-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onclick="closeModal(event, 'form-modal')">
+
                     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden" onclick="event.stopPropagation()">
+
                         <div class="px-6 py-4 border-b flex justify-between items-center bg-slate-50">
+
                             <h3 class="text-lg font-bold text-slate-800"><i class="fas ${mode==='add' ? 'fa-plus' : 'fa-edit'} text-blue-500 mr-2"></i> ${mode === 'add' ? 'Tambah Data Baru' : 'Edit Data'} - ${state.activeSubTab} (${term})</h3>
+
                             <button onclick="closeModal(null, 'form-modal')" class="text-slate-400 hover:text-rose-600 p-1"><i class="fas fa-times text-xl"></i></button>
+
                         </div>
+
                         <form id="dataForm" onsubmit="handleSave(event)" class="overflow-y-auto p-6 relative flex-1">
+
                             <div id="form-overlay" class="hidden absolute inset-0 bg-white/80 z-10 flex items-center justify-center">
+
                                 <div class="loader"></div><span class="ml-2 font-medium text-slate-600">Menyimpan ke Firebase...</span>
+
                             </div>
+
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4">
+
                                 ${createInput('colA', columnLabels.colA, item.colA, 'text', true)}
+
                                 ${createInput('colB', columnLabels.colB, item.colB)}
+
                                 ${createInput('colC', columnLabels.colC, item.colC)}
+
                                 ${createInput('colD', `NO ${term.toUpperCase()} (D)`, item.colD)}
+
                                 ${createInput('colE', columnLabels.colE, item.colE, 'date')}
+
                                 ${createInput('colF', columnLabels.colF, item.colF)}
+
                                 ${createInput('colG', columnLabels.colG, item.colG)}
+
                                 ${createInput('colH', columnLabels.colH, item.colH)}
+
                                 ${createInput('colI', columnLabels.colI, item.colI)}
+
                                 ${createInput('colJ', `${term.toUpperCase()} BARU (J)`, item.colJ, 'number')}
+
                                 ${createInput('colK', `${term.toUpperCase()} GANTI (K)`, item.colK, 'number')}
+
                                 ${createInput('colL', `${term.toUpperCase()} BAIK (L)`, item.colL, 'number')}
+
                                 ${createInput('colM', `${term.toUpperCase()} RUSAK (M)`, item.colM, 'number')}
+
                                 ${createInput('colN', columnLabels.colN, item.colN)}
+
                                 ${createInput('colO', columnLabels.colO, item.colO)}
+
                                 ${createInput('colP', columnLabels.colP, item.colP)}
+
                                 ${createInput('colQ', columnLabels.colQ, item.colQ)}
+
                                 ${createInput('colR', columnLabels.colR, item.colR)}
+
                                 ${createInput('colS', columnLabels.colS, item.colS)}
+
                                 ${createInput('colT', columnLabels.colT, item.colT)}
+
                                 ${createInput('colU', columnLabels.colU, item.colU)}
+
                                 ${createInput('colV', columnLabels.colV, item.colV)}
+
                             </div>
+
                             <div class="mt-8 pt-4 border-t flex justify-end gap-3 sticky bottom-0 bg-white">
+
                                 <button type="button" onclick="closeModal(null, 'form-modal')" class="px-5 py-2 bg-slate-100 text-slate-600 rounded-lg font-medium hover:bg-slate-200">Batal</button>
+
                                 <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm font-medium"><i class="fas fa-save mr-1"></i> Simpan ke Firebase</button>
+
                             </div>
+
                         </form>
+
                     </div>
+
                 </div>
+
             `;
+
             document.getElementById('modal-container').innerHTML = formHtml;
+
             document.body.classList.add('modal-open');
+
         }
+
+
 
         function createInput(id, label, value = '', type = 'text', readonly = false) {
+
             return `
+
                 <div class="flex flex-col gap-1">
+
                     <label class="text-xs font-semibold text-slate-600">${label}</label>
+
                     <input type="${type}" id="${id}" name="${id}" value="${value || ''}" ${readonly ? 'readonly' : ''} 
+
                         class="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none ${readonly ? 'bg-slate-100 text-slate-500' : 'bg-white'}">
+
                 </div>
+
             `;
+
         }
+
+
 
         function handleSave(event) {
+
             event.preventDefault();
+
             document.getElementById('form-overlay').classList.remove('hidden');
+
             
+
             const formData = new FormData(event.target);
+
             const newItem = {};
+
             for (let [key, value] of formData.entries()) {
+
                 newItem[key] = value;
+
             }
 
+
+
             const isNew = state.formMode === 'add';
+
             
+
             persistData(newItem, isNew, function(success) {
+
                 if(success) {
+
                     closeModal(null, 'form-modal');
+
                     showToast('Data berhasil disimpan ke Firebase!', 'success');
+
                     fetchData();
+
                 } else {
+
                     document.getElementById('form-overlay').classList.add('hidden');
+
                     showToast('Gagal menyimpan data ke Firebase.', 'error');
+
                 }
+
             });
+
         }
+
+
 
         function confirmDelete(index) {
+
             const item = state.data[index];
+
             const html = `
+
                 <div id="confirm-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
+
                     <div class="bg-white p-6 rounded-2xl shadow-xl max-w-sm w-full text-center relative overflow-hidden">
+
                         <div id="delete-overlay" class="hidden absolute inset-0 bg-white/90 z-10 flex flex-col items-center justify-center">
+
                             <div class="loader mb-2"></div><span class="text-sm font-medium text-slate-600">Menghapus...</span>
+
                         </div>
+
                         <div class="w-14 h-14 bg-rose-100 text-rose-500 rounded-2xl flex items-center justify-center mx-auto mb-4 text-xl">
+
                             <i class="fas fa-trash-alt"></i>
+
                         </div>
+
                         <h3 class="text-lg font-bold text-slate-800 mb-1">Hapus Data ID: ${item.colA}?</h3>
+
                         <p class="text-slate-500 text-xs mb-6">Tindakan ini akan menghapus data secara permanen dari Firebase.</p>
+
                         <div class="flex gap-3 justify-center">
+
                             <button onclick="closeModal(null, 'confirm-modal')" class="px-4 py-2 bg-slate-100 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-200">Batal</button>
+
                             <button onclick="executeDelete(${index}, '${item.colA}')" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-sm font-medium shadow-sm">Ya, Hapus</button>
+
                         </div>
+
                     </div>
+
                 </div>
+
             `;
+
             document.getElementById('modal-container').insertAdjacentHTML('beforeend', html);
+
         }
+
+
 
         function executeDelete(index, id) {
+
             document.getElementById('delete-overlay').classList.remove('hidden');
+
             removeData(id, function(success) {
+
                 if(success) {
+
                     closeModal(null, 'confirm-modal');
+
                     showToast('Data berhasil dihapus dari Firebase.', 'success');
+
                     fetchData();
+
                 } else {
+
                     document.getElementById('delete-overlay').classList.add('hidden');
+
                     showToast('Gagal menghapus data dari Firebase.', 'error');
+
                 }
+
             });
+
         }
+
+
 
         function closeModal(event, modalId) {
+
             if (event && event.target.id !== modalId) return;
+
             const modal = document.getElementById(modalId);
+
             if (modal) modal.remove();
+
             if (!document.querySelector('[id$="-modal"]')) document.body.classList.remove('modal-open');
+
         }
+
+
 
         function showToast(message, type = 'success') {
+
             const toast = document.createElement('div');
+
             const color = type === 'success' ? 'bg-emerald-600' : (type === 'info' ? 'bg-blue-600' : 'bg-rose-600');
+
             const icon = type === 'success' ? 'fa-check-circle' : (type === 'info' ? 'fa-info-circle' : 'fa-exclamation-triangle');
+
             
+
             toast.className = `fixed bottom-6 right-6 ${color} text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 z-[100] transition-all duration-300 translate-y-10 opacity-0 text-sm font-medium`;
+
             toast.innerHTML = `<i class="fas ${icon}"></i> <span>${message}</span>`;
+
             document.body.appendChild(toast);
+
             
+
             setTimeout(() => toast.classList.remove('translate-y-10', 'opacity-0'), 10);
+
             setTimeout(() => {
+
                 toast.classList.add('translate-y-10', 'opacity-0');
+
                 setTimeout(() => toast.remove(), 300);
+
             }, 3000);
+
         }
 
+
+
         window.onload = renderLogin;
+
     </script>
+
 </body>
+
 </html>
