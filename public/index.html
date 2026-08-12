@@ -83,16 +83,16 @@
             'ETCHING': 'Plate'
         };
 
-        // Pemetaan Kolom Khusus DB_CTCP (18 Kolom Sesuai Permintaan)
+        // Pemetaan Kolom per Departemen (CTP diset 17 Kolom)
         const deptColumns = {
             'CTCP': ['colA', 'colB', 'colC', 'colD', 'colE', 'colF', 'colG', 'colH', 'colI', 'colJ', 'colK', 'colL', 'colM', 'colN', 'colO', 'colP', 'colQ', 'colR'],
-            'CTP': ['colA', 'colB', 'colC', 'colD', 'colE', 'colF'],
+            'CTP': ['colA', 'colB', 'colC', 'colD', 'colE', 'colF', 'colG', 'colH', 'colI', 'colJ', 'colK', 'colL', 'colM', 'colN', 'colO', 'colP', 'colQ'],
             'SCREEN': ['colA', 'colB', 'colC', 'colD', 'colE', 'colF', 'colG'],
             'FLEXO': ['colA', 'colB', 'colC', 'colD', 'colE', 'colF', 'colG', 'colH', 'colI'],
             'ETCHING': ['colA', 'colB', 'colC', 'colD', 'colE', 'colF', 'colG', 'colH']
         };
 
-        // Label Khusus DB_CTCP (1-18) & Lainnya
+        // Label Kolom CTP (1 - 17)
         const columnLabels = {
             colA: 'ID (1)',
             colB: 'JOP NAME (2)',
@@ -110,8 +110,7 @@
             colN: 'PERMINTAAN KHUSUS (14)',
             colO: 'PENYEBAB RUSAK (15)',
             colP: 'SHIFT (16)',
-            colQ: 'NAMA OP (17)',
-            colR: 'NAMA PO (18)'
+            colQ: 'NAMA OP (17)'
         };
 
         const defaultStartDate = '2026-08-01';
@@ -121,7 +120,7 @@
             userRole: null, 
             username: null,
             activeMainTab: 'dashboard', 
-            activeSubTab: 'CTCP', 
+            activeSubTab: 'CTP', 
             startDate: defaultStartDate,
             endDate: defaultEndDate,
             data: [], 
@@ -199,15 +198,14 @@
                             colG: String(getVal(6) || ''),
                             colH: String(getVal(7) || ''),
                             colI: Number(getVal(8)) || 0,
-                            colJ: Number(getVal(9)) || 0,
+                            colJ: Number(getVal(9)) || 0,  // Kolom 10: Plate Ganti
                             colK: Number(getVal(10)) || 5, // Kolom 11: Plate Baik
                             colL: Number(getVal(11)) || 0, // Kolom 12: Plate Rusak
                             colM: String(getVal(12) || ''),
                             colN: String(getVal(13) || ''),
                             colO: String(getVal(14) || ''),
                             colP: String(getVal(15) || '1'),
-                            colQ: String(getVal(16) || ''),
-                            colR: String(getVal(17) || '')
+                            colQ: String(getVal(16) || '')
                         };
                         
                         if (rowObj.colA && rowObj.colA.toLowerCase() !== 'id (1)' && rowObj.colA.toLowerCase() !== 'id') {
@@ -261,7 +259,7 @@
                     colA: `${dept}-101`, colB: `Sample ${term} 1`, colC: "102394", colD: `PL-${dept}-01`,
                     colE: "2026-08-05", colF: "CRON 01", colG: "KBA 01", colH: "HVS 80gr",
                     colI: 10, colJ: 1, colK: 9, colL: 1, colM: "Scratch", colN: "Urgent", colO: "Goresan",
-                    colP: "1", colQ: "Ahmad", colR: "Budi"
+                    colP: "1", colQ: "Ahmad"
                 }
             ];
         }
@@ -497,13 +495,7 @@
                             </h2>
                         </div>
                         <div class="flex items-center gap-2">
-                            <!-- Link Google Spreadsheet dihapus untuk CTCP sesuai permintaan -->
-                            ${state.activeSubTab !== 'CTCP' ? `
-                                <a href="https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/edit" target="_blank" class="text-xs bg-emerald-50 text-emerald-700 hover:bg-emerald-100 px-3 py-1.5 rounded-lg border border-emerald-200 flex items-center gap-1.5 transition-colors">
-                                    <i class="fas fa-file-excel"></i>
-                                    <span class="hidden sm:inline">Google Sheets (${dbSheets[state.activeSubTab]})</span>
-                                </a>
-                            ` : ''}
+                            <!-- Link Spreadsheet dan Info Istilah dihilangkan untuk CTP sesuai permintaan -->
                         </div>
                     </header>
 
@@ -586,7 +578,7 @@
             const filteredData = getFilteredData();
             const term = getItemTerm();
             
-            // Rumus baru sesuai permintaan untuk CTCP:
+            // Perhitungan rumus khusus CTP:
             // Total Plate Baik = kolom 11 (colK)
             // Total Plate Rusak = kolom 12 (colL)
             // Total Plate Ganti = kolom 10 (colJ)
@@ -603,8 +595,6 @@
                     <div class="flex flex-wrap justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-slate-200 no-print">
                         <div>
                             <h2 class="text-lg font-bold text-slate-800"><i class="fas fa-chart-line text-blue-500 mr-2"></i> Dashboard Kinerja - ${state.activeSubTab}</h2>
-                            <!-- Subtitle info 'Istilah unit' dihilangkan khusus CTCP sesuai permintaan -->
-                            ${state.activeSubTab !== 'CTCP' ? `<p class="text-xs text-slate-500">Istilah unit: <strong class="text-blue-600">${term}</strong> | Sheet: <strong class="font-mono text-slate-700">${dbSheets[state.activeSubTab]}</strong></p>` : ''}
                         </div>
                         <div class="flex flex-wrap items-center gap-2 mt-3 sm:mt-0 filter-bar">
                             <input type="date" id="dash-start-date" value="${state.startDate}" class="p-2 border rounded-lg text-sm bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none">
@@ -687,12 +677,12 @@
 
             const term = getItemTerm();
 
-            // Grafik Penggunaan Harian: Berdasarkan tanggal kolom 5 (colE) dan nilai penggunaan (kolom 11 + kolom 12) untuk CTCP
+            // Grafik Penggunaan Harian: Berdasarkan tanggal kolom 5 (colE) dan nilai penggunaan (kolom 11 + kolom 12 / colK + colL)
             const dailyMap = {};
             data.forEach(d => {
                 const date = d.colE;
                 if(!date) return;
-                const usage = (Number(d.colK)||0) + (Number(d.colL)||0);
+                const usage = (Number(d.colK) || 0) + (Number(d.colL) || 0);
                 dailyMap[date] = (dailyMap[date] || 0) + usage;
             });
             const sortedDates = Object.keys(dailyMap).sort();
@@ -761,7 +751,7 @@
                 });
             }
 
-            // Mesin Expose: Dari kolom 6 (colF) untuk CTCP
+            // Mesin Expose: Dari kolom 6 (colF)
             const mesinMap = {};
             data.forEach(d => {
                 const m = d.colF || 'Tidak Diketahui';
@@ -860,14 +850,12 @@
             document.body.classList.add('modal-open');
         }
 
-       function renderDatabase(container) {
+        function renderDatabase(container) {
             const isReadOnly = state.userRole === 'umum';
             const term = getItemTerm();
             
-            // Batasi kolom yang tampil di tabel utama hanya Kolom 1 sampai 5 (colA sampai colE) untuk CTCP jika sedang di tab CTCP
-            const cols = state.activeSubTab === 'CTCP' 
-                ? ['colA', 'colB', 'colC', 'colD', 'colE'] 
-                : deptColumns[state.activeSubTab];
+            // Batasi tampilan tabel utama hanya Kolom 1 sampai 5 (colA s.d colE)
+            const cols = ['colA', 'colB', 'colC', 'colD', 'colE'];
             
             container.innerHTML = `
                 <div class="max-w-7xl mx-auto h-full flex flex-col print-container">
