@@ -57,7 +57,6 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        // Google Spreadsheet ID
         const GOOGLE_SHEET_ID = '1ogvE_rvBK2awjmEpDkWxkjQ_URehd_OscwyGlhYNZJw';
 
         const jopCategories = {
@@ -68,7 +67,6 @@
 
         const departments = ['CTCP', 'CTP', 'SCREEN', 'FLEXO', 'ETCHING'];
         
-        // Pemetaan Sheet Google Spreadsheet
         const dbSheets = {
             'CTCP': 'DB_CTCP',
             'CTP': 'DB_CTP',
@@ -77,7 +75,6 @@
             'ETCHING': 'DB_ETCHING'
         };
 
-        // Pemetaan Istilah per Departemen
         const deptTerms = {
             'CTCP': 'Plate',
             'CTP': 'Plate',
@@ -86,39 +83,35 @@
             'ETCHING': 'Plate'
         };
 
-        // Kolom spesifik yang ditampilkan di Tabel Database per Departemen
+        // Pemetaan Kolom Khusus DB_CTCP (18 Kolom Sesuai Permintaan)
         const deptColumns = {
-            'CTCP': ['colA', 'colB', 'colC', 'colD', 'colE', 'colF'],
+            'CTCP': ['colA', 'colB', 'colC', 'colD', 'colE', 'colF', 'colG', 'colH', 'colI', 'colJ', 'colK', 'colL', 'colM', 'colN', 'colO', 'colP', 'colQ', 'colR'],
             'CTP': ['colA', 'colB', 'colC', 'colD', 'colE', 'colF'],
             'SCREEN': ['colA', 'colB', 'colC', 'colD', 'colE', 'colF', 'colG'],
             'FLEXO': ['colA', 'colB', 'colC', 'colD', 'colE', 'colF', 'colG', 'colH', 'colI'],
             'ETCHING': ['colA', 'colB', 'colC', 'colD', 'colE', 'colF', 'colG', 'colH']
         };
 
-        // Label Nama Kolom A - V
+        // Label Khusus DB_CTCP (1-18) & Lainnya
         const columnLabels = {
-            colA: 'ID (A)',
-            colB: 'JOP NAME (B)',
-            colC: 'NO JOP (C)',
-            colD: 'NO ITEM (D)',
-            colE: 'DATE (E)',
-            colF: 'SHIFT (F)',
-            colG: 'MESIN EXPOSE (G)',
-            colH: 'UKURAN (H)',
-            colI: 'MESIN CETAK (I)',
-            colJ: 'ITEM BARU (J)',
-            colK: 'ITEM GANTI (K)',
-            colL: 'ITEM BAIK (L)',
-            colM: 'ITEM RUSAK (M)',
-            colN: 'PENYEBAB GANTI (N)',
-            colO: 'PERMINTAAN KHUSUS (O)',
-            colP: 'PENYEBAB RUSAK (P)',
-            colQ: 'NAMA OP (Q)',
-            colR: 'NAMA PO (R)',
-            colS: 'JENIS KERTAS (S)',
-            colT: 'SEBAB GANTI (T)',
-            colU: 'SEBAB KHUSUS (U)',
-            colV: 'SEBAB RUSAK (V)'
+            colA: 'ID (1)',
+            colB: 'JOP NAME (2)',
+            colC: 'NO JOP (3)',
+            colD: 'NO PLATE (4)',
+            colE: 'DATE (5)',
+            colF: 'MESIN EXPOSE (6)',
+            colG: 'MESIN CETAK (7)',
+            colH: 'JENIS KERTAS (8)',
+            colI: 'PLATE BARU (9)',
+            colJ: 'PLATE GANTI (10)',
+            colK: 'PLATE BAIK (11)',
+            colL: 'PLATE RUSAK (12)',
+            colM: 'PENYEBAB GANTI (13)',
+            colN: 'PERMINTAAN KHUSUS (14)',
+            colO: 'PENYEBAB RUSAK (15)',
+            colP: 'SHIFT (16)',
+            colQ: 'NAMA OP (17)',
+            colR: 'NAMA PO (18)'
         };
 
         const defaultStartDate = '2026-08-01';
@@ -139,49 +132,47 @@
             sidebarOpen: false
         };
 
-async function fetchUsersFromGoogleSheets() {
-    const url = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:json&sheet=DB_USER`;
-    try {
-        const response = await fetch(url);
-        const text = await response.text();
-        const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);?/);
-        if (!match || !match[1]) throw new Error("Format respons tidak valid");
-        
-        const jsonData = JSON.parse(match[1]);
-        const users = [];
-        
-        jsonData.table.rows.forEach(r => {
-            if (r && r.c) {
-                // Mengambil nilai cell dengan aman (mendukung .f atau .v)
-                const getVal = (cell) => {
-                    if (!cell) return '';
-                    return cell.f !== undefined ? cell.f : (cell.v !== undefined ? cell.v : '');
-                };
-
-                const u = getVal(r.c[0]);
-                const role = getVal(r.c[1]);
-                const pass = getVal(r.c[2]);
+        async function fetchUsersFromGoogleSheets() {
+            const url = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:json&sheet=DB_USER`;
+            try {
+                const response = await fetch(url);
+                const text = await response.text();
+                const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);?/);
+                if (!match || !match[1]) throw new Error("Format respons tidak valid");
                 
-                const parsedUser = String(u).trim();
-                const parsedRole = String(role).trim().toLowerCase();
-                // Konversi password ke string secara eksplisit agar aman saat dibandingkan dengan input form
-                const parsedPass = String(pass).trim();
+                const jsonData = JSON.parse(match[1]);
+                const users = [];
+                
+                jsonData.table.rows.forEach(r => {
+                    if (r && r.c) {
+                        const getVal = (cell) => {
+                            if (!cell) return '';
+                            return cell.f !== undefined ? cell.f : (cell.v !== undefined ? cell.v : '');
+                        };
 
-                if (parsedUser && parsedUser.toLowerCase() !== 'user' && parsedUser.toLowerCase() !== 'username') { 
-                    users.push({ 
-                        user: parsedUser, 
-                        role: parsedRole, 
-                        pass: parsedPass 
-                    });
-                }
+                        const u = getVal(r.c[0]);
+                        const role = getVal(r.c[1]);
+                        const pass = getVal(r.c[2]);
+                        
+                        const parsedUser = String(u).trim();
+                        const parsedRole = String(role).trim().toLowerCase();
+                        const parsedPass = String(pass).trim();
+
+                        if (parsedUser && parsedUser.toLowerCase() !== 'user' && parsedUser.toLowerCase() !== 'username') { 
+                            users.push({ 
+                                user: parsedUser, 
+                                role: parsedRole, 
+                                pass: parsedPass 
+                            });
+                        }
+                    }
+                });
+                return users;
+            } catch (err) {
+                console.error('Error fetching users from DB_USER:', err);
+                return [];
             }
-        });
-        return users;
-    } catch (err) {
-        console.error('Error fetching users from DB_USER:', err);
-        return [];
-    }
-}
+        }
 
         async function fetchSheetFromGoogleSheets(sheetName) {
             const url = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:json&sheet=${sheetName}`;
@@ -204,26 +195,22 @@ async function fetchUsersFromGoogleSheets() {
                             colC: String(getVal(2) || ''),
                             colD: String(getVal(3) || ''),
                             colE: String(getVal(4) ? String(getVal(4)).split('T')[0] : '2026-08-05'),
-                            colF: String(getVal(5) || '1'),
+                            colF: String(getVal(5) || ''),
                             colG: String(getVal(6) || ''),
                             colH: String(getVal(7) || ''),
-                            colI: String(getVal(8) || ''),
+                            colI: Number(getVal(8)) || 0,
                             colJ: Number(getVal(9)) || 0,
-                            colK: Number(getVal(10)) || 0,
-                            colL: Number(getVal(11)) || 5,
-                            colM: Number(getVal(12)) || 0,
+                            colK: Number(getVal(10)) || 5, // Kolom 11: Plate Baik
+                            colL: Number(getVal(11)) || 0, // Kolom 12: Plate Rusak
+                            colM: String(getVal(12) || ''),
                             colN: String(getVal(13) || ''),
                             colO: String(getVal(14) || ''),
-                            colP: String(getVal(15) || ''),
+                            colP: String(getVal(15) || '1'),
                             colQ: String(getVal(16) || ''),
-                            colR: String(getVal(17) || ''),
-                            colS: String(getVal(18) || ''),
-                            colT: String(getVal(19) || ''),
-                            colU: String(getVal(20) || ''),
-                            colV: String(getVal(21) || '')
+                            colR: String(getVal(17) || '')
                         };
                         
-                        if (rowObj.colA && rowObj.colA.toLowerCase() !== 'id (a)' && rowObj.colA.toLowerCase() !== 'id') {
+                        if (rowObj.colA && rowObj.colA.toLowerCase() !== 'id (1)' && rowObj.colA.toLowerCase() !== 'id') {
                             rows.push(rowObj);
                         }
                     }
@@ -240,8 +227,6 @@ async function fetchUsersFromGoogleSheets() {
             renderMain(); 
 
             const sheetName = dbSheets[state.activeSubTab];
-            
-            // Coba ambil langsung dari Google Spreadsheet live terlebih dahulu
             let sheetData = await fetchSheetFromGoogleSheets(sheetName);
             
             if (sheetData && sheetData.length > 0) {
@@ -249,7 +234,6 @@ async function fetchUsersFromGoogleSheets() {
                 state.isLoading = false;
                 updateContent();
             } else {
-                // Fallback ke Firebase Realtime DB jika Google Sheets gagal/kosong
                 db.ref(sheetName).once('value')
                     .then((snapshot) => {
                         const rawData = snapshot.val();
@@ -275,9 +259,9 @@ async function fetchUsersFromGoogleSheets() {
             return [
                 {
                     colA: `${dept}-101`, colB: `Sample ${term} 1`, colC: "102394", colD: `PL-${dept}-01`,
-                    colE: "2026-08-05", colF: "1", colG: "CRON 01", colH: "720x1030", colI: "KBA 01",
-                    colJ: 10, colK: 1, colL: 9, colM: 1, colN: "Scratch", colO: "Urgent", colP: "Goresan",
-                    colQ: "Ahmad", colR: "Budi", colS: "HVS 80gr", colT: "Aus", colU: "-", colV: "BBM"
+                    colE: "2026-08-05", colF: "CRON 01", colG: "KBA 01", colH: "HVS 80gr",
+                    colI: 10, colJ: 1, colK: 9, colL: 1, colM: "Scratch", colN: "Urgent", colO: "Goresan",
+                    colP: "1", colQ: "Ahmad", colR: "Budi"
                 }
             ];
         }
@@ -513,10 +497,13 @@ async function fetchUsersFromGoogleSheets() {
                             </h2>
                         </div>
                         <div class="flex items-center gap-2">
-                            <a href="https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/edit" target="_blank" class="text-xs bg-emerald-50 text-emerald-700 hover:bg-emerald-100 px-3 py-1.5 rounded-lg border border-emerald-200 flex items-center gap-1.5 transition-colors">
-                                <i class="fas fa-file-excel"></i>
-                                <span class="hidden sm:inline">Google Sheets (${dbSheets[state.activeSubTab]})</span>
-                            </a>
+                            <!-- Link Google Spreadsheet dihapus untuk CTCP sesuai permintaan -->
+                            ${state.activeSubTab !== 'CTCP' ? `
+                                <a href="https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/edit" target="_blank" class="text-xs bg-emerald-50 text-emerald-700 hover:bg-emerald-100 px-3 py-1.5 rounded-lg border border-emerald-200 flex items-center gap-1.5 transition-colors">
+                                    <i class="fas fa-file-excel"></i>
+                                    <span class="hidden sm:inline">Google Sheets (${dbSheets[state.activeSubTab]})</span>
+                                </a>
+                            ` : ''}
                         </div>
                     </header>
 
@@ -599,10 +586,16 @@ async function fetchUsersFromGoogleSheets() {
             const filteredData = getFilteredData();
             const term = getItemTerm();
             
-            const totalBaik = filteredData.reduce((sum, item) => sum + (Number(item.colL) || 0), 0);
-            const totalRusak = filteredData.reduce((sum, item) => sum + (Number(item.colM) || 0), 0);
-            const totalGanti = filteredData.reduce((sum, item) => sum + (Number(item.colK) || 0), 0);
-            const totalPenggunaan = totalBaik + totalRusak + totalGanti;
+            // Rumus baru sesuai permintaan untuk CTCP:
+            // Total Plate Baik = kolom 11 (colK)
+            // Total Plate Rusak = kolom 12 (colL)
+            // Total Plate Ganti = kolom 10 (colJ)
+            // Total Penggunaan = kolom 11 (colK) + kolom 12 (colL)
+            // Persentase Rusak = (kolom 12 / (kolom 11 + kolom 12)) * 100%
+            const totalBaik = filteredData.reduce((sum, item) => sum + (Number(item.colK) || 0), 0);
+            const totalRusak = filteredData.reduce((sum, item) => sum + (Number(item.colL) || 0), 0);
+            const totalGanti = filteredData.reduce((sum, item) => sum + (Number(item.colJ) || 0), 0);
+            const totalPenggunaan = totalBaik + totalRusak;
             const pctRusak = totalPenggunaan > 0 ? ((totalRusak / totalPenggunaan) * 100).toFixed(1) : 0;
 
             container.innerHTML = `
@@ -610,7 +603,8 @@ async function fetchUsersFromGoogleSheets() {
                     <div class="flex flex-wrap justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-slate-200 no-print">
                         <div>
                             <h2 class="text-lg font-bold text-slate-800"><i class="fas fa-chart-line text-blue-500 mr-2"></i> Dashboard Kinerja - ${state.activeSubTab}</h2>
-                            <p class="text-xs text-slate-500">Istilah unit: <strong class="text-blue-600">${term}</strong> | Sheet: <strong class="font-mono text-slate-700">${dbSheets[state.activeSubTab]}</strong></p>
+                            <!-- Subtitle info 'Istilah unit' dihilangkan khusus CTCP sesuai permintaan -->
+                            ${state.activeSubTab !== 'CTCP' ? `<p class="text-xs text-slate-500">Istilah unit: <strong class="text-blue-600">${term}</strong> | Sheet: <strong class="font-mono text-slate-700">${dbSheets[state.activeSubTab]}</strong></p>` : ''}
                         </div>
                         <div class="flex flex-wrap items-center gap-2 mt-3 sm:mt-0 filter-bar">
                             <input type="date" id="dash-start-date" value="${state.startDate}" class="p-2 border rounded-lg text-sm bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none">
@@ -693,11 +687,13 @@ async function fetchUsersFromGoogleSheets() {
 
             const term = getItemTerm();
 
+            // Grafik Penggunaan Harian: Berdasarkan tanggal kolom 5 (colE) dan nilai penggunaan (kolom 11 + kolom 12) untuk CTCP
             const dailyMap = {};
             data.forEach(d => {
                 const date = d.colE;
                 if(!date) return;
-                dailyMap[date] = (dailyMap[date] || 0) + (Number(d.colL)||0) + (Number(d.colK)||0) + (Number(d.colM)||0);
+                const usage = (Number(d.colK)||0) + (Number(d.colL)||0);
+                dailyMap[date] = (dailyMap[date] || 0) + usage;
             });
             const sortedDates = Object.keys(dailyMap).sort();
             
@@ -734,6 +730,7 @@ async function fetchUsersFromGoogleSheets() {
                 });
             }
 
+            // Kategori JOP: Berdasarkan nomor JOP di kolom 3 (colC)
             const jopMap = {};
             data.forEach(d => {
                 const category = jopCategories[String(d.colC).charAt(0)] || 'OTHERS';
@@ -764,9 +761,10 @@ async function fetchUsersFromGoogleSheets() {
                 });
             }
 
+            // Mesin Expose: Dari kolom 6 (colF) untuk CTCP
             const mesinMap = {};
             data.forEach(d => {
-                const m = d.colG || 'Tidak Diketahui';
+                const m = d.colF || 'Tidak Diketahui';
                 mesinMap[m] = (mesinMap[m] || 0) + 1;
             });
             const mesinCanvas = document.getElementById('chartMesin');
@@ -786,7 +784,7 @@ async function fetchUsersFromGoogleSheets() {
                             if (elements.length > 0) {
                                 const index = elements[0].index;
                                 const mesinName = mesinList[index];
-                                const items = data.filter(d => (d.colG || 'Tidak Diketahui') === mesinName);
+                                const items = data.filter(d => (d.colF || 'Tidak Diketahui') === mesinName);
                                 showDetailModal(`Detail Mesin Expose: ${mesinName}`, items);
                             }
                         }
@@ -803,13 +801,13 @@ async function fetchUsersFromGoogleSheets() {
 
             if (type === 'baik') {
                 title = `Daftar ${term} Baik`;
-                items = data.filter(d => Number(d.colL) > 0);
+                items = data.filter(d => Number(d.colK) > 0);
             } else if (type === 'rusak') {
                 title = `Daftar ${term} Rusak`;
-                items = data.filter(d => Number(d.colM) > 0);
+                items = data.filter(d => Number(d.colL) > 0);
             } else if (type === 'ganti') {
                 title = `Daftar ${term} Ganti`;
-                items = data.filter(d => Number(d.colK) > 0);
+                items = data.filter(d => Number(d.colJ) > 0);
             } else {
                 title = `Seluruh Transaksi Penggunaan ${term}`;
                 items = data;
@@ -834,7 +832,7 @@ async function fetchUsersFromGoogleSheets() {
                             <table class="w-full text-left text-sm whitespace-nowrap">
                                 <thead class="bg-slate-100 border-b text-slate-600 sticky top-0">
                                     <tr>
-                                        ${cols.map(c => `<th class="py-2.5 px-3 font-semibold">${columnLabels[c]}</th>`).join('')}
+                                        ${cols.map(c => `<th class="py-2.5 px-3 font-semibold ${c==='colB'?'max-w-[120px] truncate':''}">${columnLabels[c]}</th>`).join('')}
                                         <th class="py-2.5 px-3 font-semibold text-center">BAIK</th>
                                         <th class="py-2.5 px-3 font-semibold text-center">RUSAK</th>
                                     </tr>
@@ -843,16 +841,16 @@ async function fetchUsersFromGoogleSheets() {
                                     ${items.length === 0 ? `<tr><td colspan="${cols.length + 2}" class="text-center py-8 text-slate-400">Tidak ada data rincian.</td></tr>` : ''}
                                     ${items.map(row => `
                                         <tr class="hover:bg-slate-50 transition-colors cursor-pointer" onclick="openFullRowDetail('${row.colA}')">
-                                            ${cols.map(c => `<td class="py-2.5 px-3">${row[c] || '-'}</td>`).join('')}
-                                            <td class="py-2.5 px-3 text-center text-emerald-600 font-bold">${row.colL || 0}</td>
-                                            <td class="py-2.5 px-3 text-center text-rose-600 font-bold">${row.colM || 0}</td>
+                                            ${cols.map(c => `<td class="py-2.5 px-3 ${c==='colB'?'max-w-[120px] truncate':''}">${row[c] || '-'}</td>`).join('')}
+                                            <td class="py-2.5 px-3 text-center text-emerald-600 font-bold">${row.colK || 0}</td>
+                                            <td class="py-2.5 px-3 text-center text-rose-600 font-bold">${row.colL || 0}</td>
                                         </tr>
                                     `).join('')}
                                 </tbody>
                             </table>
                         </div>
                         <div class="px-6 py-3 bg-slate-50 border-t flex justify-between items-center text-xs text-slate-500">
-                            <span>* Klik pada salah satu baris untuk melihat seluruh data lengkap A-V</span>
+                            <span>* Klik pada salah satu baris untuk melihat seluruh data lengkap</span>
                             <button onclick="closeModal(null, 'detail-modal')" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 font-medium">Tutup</button>
                         </div>
                     </div>
@@ -872,7 +870,7 @@ async function fetchUsersFromGoogleSheets() {
                     <div class="flex flex-wrap justify-between items-center mb-6 gap-4 no-print">
                         <div>
                             <h2 class="text-xl font-bold text-slate-800"><i class="fas fa-database text-emerald-500 mr-2"></i> Database JOP - ${state.activeSubTab}</h2>
-                            <p class="text-sm text-slate-500 mt-0.5">Menampilkan kolom <strong class="text-slate-700 font-mono">${cols[0].replace('col','')} - ${cols[cols.length-1].replace('col','')}</strong> untuk departemen <strong class="text-blue-600">${state.activeSubTab} (${term})</strong></p>
+                            <p class="text-sm text-slate-500 mt-0.5">Menampilkan seluruh kolom untuk departemen <strong class="text-blue-600">${state.activeSubTab} (${term})</strong></p>
                         </div>
                         <div class="flex items-center gap-2">
                             <button onclick="printDatabase()" class="bg-slate-700 hover:bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm flex items-center transition-colors">
@@ -896,7 +894,9 @@ async function fetchUsersFromGoogleSheets() {
                             <table class="w-full text-left text-sm whitespace-nowrap">
                                 <thead class="bg-slate-50 border-b border-slate-200 text-slate-600 sticky top-0 z-10">
                                     <tr>
-                                        ${cols.map(colKey => `<th class="py-3 px-4 font-semibold">${columnLabels[colKey]}</th>`).join('')}
+                                        ${cols.map(colKey => `
+                                            <th class="py-3 px-4 font-semibold ${colKey === 'colB' ? 'max-w-[130px] truncate' : ''}">${columnLabels[colKey]}</th>
+                                        `).join('')}
                                         ${!isReadOnly ? `<th class="py-3 px-4 font-semibold text-right sticky right-0 bg-slate-50 no-print">Aksi</th>` : ''}
                                     </tr>
                                 </thead>
@@ -905,7 +905,7 @@ async function fetchUsersFromGoogleSheets() {
                                     ${state.data.map((row, index) => `
                                         <tr class="hover:bg-blue-50/60 transition-colors cursor-pointer group" onclick="openFullRowDetailByIndex(${index})">
                                             ${cols.map(colKey => `
-                                                <td class="py-3 px-4 ${colKey==='colA'?'font-mono text-xs text-slate-500':''} ${colKey==='colC'?'font-medium text-blue-600':''}">
+                                                <td class="py-3 px-4 ${colKey==='colA'?'font-mono text-xs text-slate-500':''} ${colKey==='colC'?'font-medium text-blue-600':''} ${colKey==='colB'?'max-w-[130px] truncate':''}">
                                                     ${row[colKey] || '-'}
                                                 </td>
                                             `).join('')}
@@ -938,14 +938,14 @@ async function fetchUsersFromGoogleSheets() {
             const item = state.data.find(d => d.colA === id);
             if(!item) return;
 
-            const allCols = ['colA','colB','colC','colD','colE','colF','colG','colH','colI','colJ','colK','colL','colM','colN','colO','colP','colQ','colR','colS','colT','colU','colV'];
+            const allCols = deptColumns[state.activeSubTab];
 
             const modalHtml = `
                 <div id="full-detail-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4" onclick="closeModal(event, 'full-detail-modal')">
                     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden" onclick="event.stopPropagation()">
                         <div class="px-6 py-4 border-b flex justify-between items-center bg-slate-800 text-white">
                             <div>
-                                <h3 class="text-lg font-bold"><i class="fas fa-file-alt text-blue-400 mr-2"></i> Rincian Lengkap Data (A - V)</h3>
+                                <h3 class="text-lg font-bold"><i class="fas fa-file-alt text-blue-400 mr-2"></i> Rincian Lengkap Data</h3>
                                 <p class="text-xs text-slate-300">ID Data: ${item.colA || '-'}</p>
                             </div>
                             <button onclick="closeModal(null, 'full-detail-modal')" class="text-slate-400 hover:text-white p-1"><i class="fas fa-times text-xl"></i></button>
@@ -983,6 +983,7 @@ async function fetchUsersFromGoogleSheets() {
             }
 
             const term = getItemTerm();
+            const cols = deptColumns[state.activeSubTab];
 
             const formHtml = `
                 <div id="form-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onclick="closeModal(event, 'form-modal')">
@@ -996,28 +997,13 @@ async function fetchUsersFromGoogleSheets() {
                                 <div class="loader"></div><span class="ml-2 font-medium text-slate-600">Menyimpan...</span>
                             </div>
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4">
-                                ${createInput('colA', columnLabels.colA, item.colA, 'text', true)}
-                                ${createInput('colB', columnLabels.colB, item.colB)}
-                                ${createInput('colC', columnLabels.colC, item.colC)}
-                                ${createInput('colD', `NO ${term.toUpperCase()} (D)`, item.colD)}
-                                ${createInput('colE', columnLabels.colE, item.colE, 'date')}
-                                ${createInput('colF', columnLabels.colF, item.colF)}
-                                ${createInput('colG', columnLabels.colG, item.colG)}
-                                ${createInput('colH', columnLabels.colH, item.colH)}
-                                ${createInput('colI', columnLabels.colI, item.colI)}
-                                ${createInput('colJ', `${term.toUpperCase()} BARU (J)`, item.colJ, 'number')}
-                                ${createInput('colK', `${term.toUpperCase()} GANTI (K)`, item.colK, 'number')}
-                                ${createInput('colL', `${term.toUpperCase()} BAIK (L)`, item.colL, 'number')}
-                                ${createInput('colM', `${term.toUpperCase()} RUSAK (M)`, item.colM, 'number')}
-                                ${createInput('colN', columnLabels.colN, item.colN)}
-                                ${createInput('colO', columnLabels.colO, item.colO)}
-                                ${createInput('colP', columnLabels.colP, item.colP)}
-                                ${createInput('colQ', columnLabels.colQ, item.colQ)}
-                                ${createInput('colR', columnLabels.colR, item.colR)}
-                                ${createInput('colS', columnLabels.colS, item.colS)}
-                                ${createInput('colT', columnLabels.colT, item.colT)}
-                                ${createInput('colU', columnLabels.colU, item.colU)}
-                                ${createInput('colV', columnLabels.colV, item.colV)}
+                                ${cols.map(key => {
+                                    let type = 'text';
+                                    if (key === 'colE') type = 'date';
+                                    if (['colI','colJ','colK','colL'].includes(key)) type = 'number';
+                                    let readonly = (key === 'colA');
+                                    return createInput(key, columnLabels[key], item[key], type, readonly);
+                                }).join('')}
                             </div>
                             <div class="mt-8 pt-4 border-t flex justify-end gap-3 sticky bottom-0 bg-white">
                                 <button type="button" onclick="closeModal(null, 'form-modal')" class="px-5 py-2 bg-slate-100 text-slate-600 rounded-lg font-medium hover:bg-slate-200">Batal</button>
@@ -1035,7 +1021,7 @@ async function fetchUsersFromGoogleSheets() {
             return `
                 <div class="flex flex-col gap-1">
                     <label class="text-xs font-semibold text-slate-600">${label}</label>
-                    <input type="${type}" id="${id}" name="${id}" value="${value || ''}" ${readonly ? 'readonly' : ''} 
+                    <input type="${type}" id="${id}" name="${id}" value="${value !== undefined && value !== null ? value : ''}" ${readonly ? 'readonly' : ''} 
                         class="px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none ${readonly ? 'bg-slate-100 text-slate-500' : 'bg-white'}">
                 </div>
             `;
