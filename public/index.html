@@ -860,17 +860,21 @@
             document.body.classList.add('modal-open');
         }
 
-        function renderDatabase(container) {
+       function renderDatabase(container) {
             const isReadOnly = state.userRole === 'umum';
-            const cols = deptColumns[state.activeSubTab];
             const term = getItemTerm();
+            
+            // Batasi kolom yang tampil di tabel utama hanya Kolom 1 sampai 5 (colA sampai colE) untuk CTCP jika sedang di tab CTCP
+            const cols = state.activeSubTab === 'CTCP' 
+                ? ['colA', 'colB', 'colC', 'colD', 'colE'] 
+                : deptColumns[state.activeSubTab];
             
             container.innerHTML = `
                 <div class="max-w-7xl mx-auto h-full flex flex-col print-container">
                     <div class="flex flex-wrap justify-between items-center mb-6 gap-4 no-print">
                         <div>
                             <h2 class="text-xl font-bold text-slate-800"><i class="fas fa-database text-emerald-500 mr-2"></i> Database JOP - ${state.activeSubTab}</h2>
-                            <p class="text-sm text-slate-500 mt-0.5">Menampilkan seluruh kolom untuk departemen <strong class="text-blue-600">${state.activeSubTab} (${term})</strong></p>
+                            <p class="text-sm text-slate-500 mt-0.5">Menampilkan Kolom 1 - 5. <strong class="text-blue-600">Klik pada baris data</strong> untuk melihat rincian lengkap.</p>
                         </div>
                         <div class="flex items-center gap-2">
                             <button onclick="printDatabase()" class="bg-slate-700 hover:bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm flex items-center transition-colors">
@@ -895,7 +899,7 @@
                                 <thead class="bg-slate-50 border-b border-slate-200 text-slate-600 sticky top-0 z-10">
                                     <tr>
                                         ${cols.map(colKey => `
-                                            <th class="py-3 px-4 font-semibold ${colKey === 'colB' ? 'max-w-[130px] truncate' : ''}">${columnLabels[colKey]}</th>
+                                            <th class="py-3 px-4 font-semibold ${colKey === 'colB' ? 'max-w-[150px] truncate' : ''}">${columnLabels[colKey]}</th>
                                         `).join('')}
                                         ${!isReadOnly ? `<th class="py-3 px-4 font-semibold text-right sticky right-0 bg-slate-50 no-print">Aksi</th>` : ''}
                                     </tr>
@@ -905,7 +909,7 @@
                                     ${state.data.map((row, index) => `
                                         <tr class="hover:bg-blue-50/60 transition-colors cursor-pointer group" onclick="openFullRowDetailByIndex(${index})">
                                             ${cols.map(colKey => `
-                                                <td class="py-3 px-4 ${colKey==='colA'?'font-mono text-xs text-slate-500':''} ${colKey==='colC'?'font-medium text-blue-600':''} ${colKey==='colB'?'max-w-[130px] truncate':''}">
+                                                <td class="py-3 px-4 ${colKey==='colA'?'font-mono text-xs text-slate-500':''} ${colKey==='colC'?'font-medium text-blue-600':''} ${colKey==='colB'?'max-w-[150px] truncate':''}">
                                                     ${row[colKey] || '-'}
                                                 </td>
                                             `).join('')}
