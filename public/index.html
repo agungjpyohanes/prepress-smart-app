@@ -554,20 +554,16 @@
             else if (state.activeMainTab === 'database') renderDatabase(container);
         }
 
-function getFilteredData() {
+        function getFilteredData() {
             if (!state.startDate || !state.endDate) return state.data;
-            
-            // Konversi string tanggal input ke format YYYY-MM-DD string murni untuk menghindarigeseran zona waktu jam
-            const startStr = state.startDate; // Format: "YYYY-MM-DD"
-            const endStr = state.endDate;     // Format: "YYYY-MM-DD"
+            const start = new Date(state.startDate);
+            const end = new Date(state.endDate);
+            end.setHours(23, 59, 59); 
             
             return state.data.filter(d => {
                 if(!d.colE) return false;
-                // Ambil tanggal murni bagian depannya saja (mengabaikan jam/utc jika ada)
-                const itemDateStr = String(d.colE).split('T')[0];
-                
-                // Bandingkan secara string murni YYYY-MM-DD agar rentang 1 hari penuh terbaca akurat
-                return itemDateStr >= startStr && itemDateStr <= endStr;
+                const itemDate = new Date(d.colE);
+                return itemDate >= start && itemDate <= end;
             });
         }
 
