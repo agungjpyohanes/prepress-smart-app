@@ -16,6 +16,7 @@
 
     <style>
         body { font-family: 'Inter', sans-serif; }
+        
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
@@ -31,7 +32,9 @@
             th, td { border: 1px solid #333 !important; padding: 6px !important; font-size: 9pt; }
             thead { background-color: #eee !important; color: #000 !important; }
         }
+        
         .modal-open { overflow: hidden; }
+
         .loader {
             border: 3px solid #f3f3f3;
             border-top: 3px solid #3b82f6;
@@ -48,12 +51,14 @@
     <div id="app" class="h-full w-full flex"></div>
 
     <script>
-        // KONFIGURASI FIREBASE REALTIME DATABASE
         const firebaseConfig = {
             databaseURL: "https://prepress-smart-v1-default-rtdb.firebaseio.com/"
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
+
+        // Google Spreadsheet ID
+        const GOOGLE_SHEET_ID = '1ogvE_rvBK2awjmEpDkWxkjQ_URehd_OscwyGlhYNZJw';
 
         const jopCategories = {
             '0': 'K3', '1': 'SCHOOL SUPPLY', '2': 'OFFICE SUPPLY', '3': 'KERTAS SURAT',
@@ -63,6 +68,7 @@
 
         const departments = ['CTCP', 'CTP', 'SCREEN', 'FLEXO', 'ETCHING'];
         
+        // Pemetaan Sheet Google Spreadsheet
         const dbSheets = {
             'CTCP': 'DB_CTCP',
             'CTP': 'DB_CTP',
@@ -71,6 +77,7 @@
             'ETCHING': 'DB_ETCHING'
         };
 
+        // Pemetaan Istilah per Departemen
         const deptTerms = {
             'CTCP': 'Plate',
             'CTP': 'Plate',
@@ -79,6 +86,7 @@
             'ETCHING': 'Plate'
         };
 
+        // Kolom spesifik yang ditampilkan di Tabel Database per Departemen
         const deptColumns = {
             'CTCP': ['colA', 'colB', 'colC', 'colD', 'colE', 'colF'],
             'CTP': ['colA', 'colB', 'colC', 'colD', 'colE', 'colF'],
@@ -87,13 +95,30 @@
             'ETCHING': ['colA', 'colB', 'colC', 'colD', 'colE', 'colF', 'colG', 'colH']
         };
 
+        // Label Nama Kolom A - V
         const columnLabels = {
-            colA: 'ID (A)', colB: 'JOP NAME (B)', colC: 'NO JOP (C)', colD: 'NO ITEM (D)',
-            colE: 'DATE (E)', colF: 'SHIFT (F)', colG: 'MESIN EXPOSE (G)', colH: 'UKURAN (H)',
-            colI: 'MESIN CETAK (I)', colJ: 'ITEM BARU (J)', colK: 'ITEM GANTI (K)', colL: 'ITEM BAIK (L)',
-            colM: 'ITEM RUSAK (M)', colN: 'PENYEBAB GANTI (N)', colO: 'PERMINTAAN KHUSUS (O)',
-            colP: 'PENYEBAB RUSAK (P)', colQ: 'NAMA OP (Q)', colR: 'NAMA PO (R)',
-            colS: 'JENIS KERTAS (S)', colT: 'SEBAB GANTI (T)', colU: 'SEBAB KHUSUS (U)', colV: 'SEBAB RUSAK (V)'
+            colA: 'ID (A)',
+            colB: 'JOP NAME (B)',
+            colC: 'NO JOP (C)',
+            colD: 'NO ITEM (D)',
+            colE: 'DATE (E)',
+            colF: 'SHIFT (F)',
+            colG: 'MESIN EXPOSE (G)',
+            colH: 'UKURAN (H)',
+            colI: 'MESIN CETAK (I)',
+            colJ: 'ITEM BARU (J)',
+            colK: 'ITEM GANTI (K)',
+            colL: 'ITEM BAIK (L)',
+            colM: 'ITEM RUSAK (M)',
+            colN: 'PENYEBAB GANTI (N)',
+            colO: 'PERMINTAAN KHUSUS (O)',
+            colP: 'PENYEBAB RUSAK (P)',
+            colQ: 'NAMA OP (Q)',
+            colR: 'NAMA PO (R)',
+            colS: 'JENIS KERTAS (S)',
+            colT: 'SEBAB GANTI (T)',
+            colU: 'SEBAB KHUSUS (U)',
+            colV: 'SEBAB RUSAK (V)'
         };
 
         const defaultStartDate = '2026-08-01';
@@ -114,57 +139,147 @@
             sidebarOpen: false
         };
 
-        function generateSampleData(dept) {
-            const term = deptTerms[dept];
-            return [
-                {
-                    colA: `${dept}-101`, colB: `Buku Kas Sekolah ${term}`, colC: "102394", colD: `PL-${dept}-01`,
-                    colE: "2026-08-05", colF: "1", colG: "CRON 01", colH: "720x1030", colI: "KBA 01",
-                    colJ: 10, colK: 1, colL: 9, colM: 1, colN: "Scratch", colO: "Urgent", colP: "Goresan mesin",
-                    colQ: "Ahmad", colR: "Budi", colS: "HVS 80gr", colT: "Bahan aus", colU: "-", colV: "BBM Kurang"
-                },
-                {
-                    colA: `${dept}-102`, colB: `Amplop Cokelat F4`, colC: "405821", colD: `PL-${dept}-02`,
-                    colE: "2026-08-10", colF: "2", colG: "LUSCHER", colH: "650x550", colI: "HEIDELBERG",
-                    colJ: 5, colK: 0, colL: 5, colM: 0, colN: "-", colO: "-", colP: "-",
-                    colQ: "Cahyono", colR: "Deni", colS: "Kraft 120gr", colT: "-", colU: "-", colV: "-"
-                },
-                {
-                    colA: `${dept}-103`, colB: `Karton Box Ekspor`, colC: "809112", colD: `PL-${dept}-03`,
-                    colE: "2026-08-15", colF: "1", colG: "BASYS", colH: "800x1100", colI: "KOMORI",
-                    colJ: 8, colK: 2, colL: 6, colM: 2, colN: "Pin hole", colO: "Re-run", colP: "Developer kotor",
-                    colQ: "Eko", colR: "Fajar", colS: "Duplex 300gr", colT: "Oksidasi", colU: "-", colV: "Cairan mati"
+async function fetchUsersFromGoogleSheets() {
+    const url = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:json&sheet=DB_USER`;
+    try {
+        const response = await fetch(url);
+        const text = await response.text();
+        const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);?/);
+        if (!match || !match[1]) throw new Error("Format respons tidak valid");
+        
+        const jsonData = JSON.parse(match[1]);
+        const users = [];
+        
+        jsonData.table.rows.forEach(r => {
+            if (r && r.c) {
+                // Mengambil nilai cell dengan aman (mendukung .f atau .v)
+                const getVal = (cell) => {
+                    if (!cell) return '';
+                    return cell.f !== undefined ? cell.f : (cell.v !== undefined ? cell.v : '');
+                };
+
+                const u = getVal(r.c[0]);
+                const role = getVal(r.c[1]);
+                const pass = getVal(r.c[2]);
+                
+                const parsedUser = String(u).trim();
+                const parsedRole = String(role).trim().toLowerCase();
+                // Konversi password ke string secara eksplisit agar aman saat dibandingkan dengan input form
+                const parsedPass = String(pass).trim();
+
+                if (parsedUser && parsedUser.toLowerCase() !== 'user' && parsedUser.toLowerCase() !== 'username') { 
+                    users.push({ 
+                        user: parsedUser, 
+                        role: parsedRole, 
+                        pass: parsedPass 
+                    });
                 }
-            ];
+            }
+        });
+        return users;
+    } catch (err) {
+        console.error('Error fetching users from DB_USER:', err);
+        return [];
+    }
+}
+
+        async function fetchSheetFromGoogleSheets(sheetName) {
+            const url = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:json&sheet=${sheetName}`;
+            try {
+                const response = await fetch(url);
+                const text = await response.text();
+                const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);?/);
+                if (!match || !match[1]) throw new Error("Format respons tidak valid");
+                
+                const jsonData = JSON.parse(match[1]);
+                const rows = [];
+                
+                jsonData.table.rows.forEach((r, idx) => {
+                    if (r && r.c) {
+                        const getVal = (colIndex) => (r.c[colIndex] ? (r.c[colIndex].f !== undefined ? r.c[colIndex].f : r.c[colIndex].v) : '');
+                        
+                        const rowObj = {
+                            colA: String(getVal(0) || `ID-${idx+1}`),
+                            colB: String(getVal(1) || ''),
+                            colC: String(getVal(2) || ''),
+                            colD: String(getVal(3) || ''),
+                            colE: String(getVal(4) ? String(getVal(4)).split('T')[0] : '2026-08-05'),
+                            colF: String(getVal(5) || '1'),
+                            colG: String(getVal(6) || ''),
+                            colH: String(getVal(7) || ''),
+                            colI: String(getVal(8) || ''),
+                            colJ: Number(getVal(9)) || 0,
+                            colK: Number(getVal(10)) || 0,
+                            colL: Number(getVal(11)) || 5,
+                            colM: Number(getVal(12)) || 0,
+                            colN: String(getVal(13) || ''),
+                            colO: String(getVal(14) || ''),
+                            colP: String(getVal(15) || ''),
+                            colQ: String(getVal(16) || ''),
+                            colR: String(getVal(17) || ''),
+                            colS: String(getVal(18) || ''),
+                            colT: String(getVal(19) || ''),
+                            colU: String(getVal(20) || ''),
+                            colV: String(getVal(21) || '')
+                        };
+                        
+                        if (rowObj.colA && rowObj.colA.toLowerCase() !== 'id (a)' && rowObj.colA.toLowerCase() !== 'id') {
+                            rows.push(rowObj);
+                        }
+                    }
+                });
+                return rows;
+            } catch (err) {
+                console.error(`Error fetching sheet ${sheetName}:`, err);
+                return null;
+            }
         }
 
-        // DIPERBAIKI: Menggunakan async/await agar pembacaan database jauh lebih stabil
         async function fetchData() {
             state.isLoading = true;
             renderMain(); 
 
-            const nodeName = dbSheets[state.activeSubTab];
+            const sheetName = dbSheets[state.activeSubTab];
             
-            try {
-                const snapshot = await db.ref(nodeName).once('value');
-                const rawData = snapshot.val();
-                
-                console.log(`[Firebase Debug] Node ${nodeName}:`, rawData);
-
-                if (rawData && typeof rawData === 'object' && Object.keys(rawData).length > 0) {
-                    state.data = Object.values(rawData).filter(item => item !== null).sort((a, b) => new Date(a.colE || 0) - new Date(b.colE || 0));
-                } else {
-                    console.warn(`[Firebase Warning] Data pada ${nodeName} kosong. Memuat data sampel.`);
-                    state.data = generateSampleData(state.activeSubTab);
-                }
-            } catch (error) {
-                console.error("[Firebase Error] Gagal memuat data:", error);
-                showToast("Error loading Firebase data: " + error.message, "error");
-                state.data = generateSampleData(state.activeSubTab);
-            } finally {
+            // Coba ambil langsung dari Google Spreadsheet live terlebih dahulu
+            let sheetData = await fetchSheetFromGoogleSheets(sheetName);
+            
+            if (sheetData && sheetData.length > 0) {
+                state.data = sheetData.sort((a, b) => new Date(a.colE) - new Date(b.colE));
                 state.isLoading = false;
-                renderMain();
+                updateContent();
+            } else {
+                // Fallback ke Firebase Realtime DB jika Google Sheets gagal/kosong
+                db.ref(sheetName).once('value')
+                    .then((snapshot) => {
+                        const rawData = snapshot.val();
+                        if (rawData && Object.keys(rawData).length > 0) {
+                            state.data = Object.values(rawData).sort((a, b) => new Date(a.colE) - new Date(b.colE));
+                        } else {
+                            state.data = generateSampleData(state.activeSubTab);
+                        }
+                        state.isLoading = false;
+                        updateContent();
+                    })
+                    .catch((error) => {
+                        console.error("Firebase fallback error:", error);
+                        state.data = generateSampleData(state.activeSubTab);
+                        state.isLoading = false;
+                        updateContent();
+                    });
             }
+        }
+
+        function generateSampleData(dept) {
+            const term = deptTerms[dept];
+            return [
+                {
+                    colA: `${dept}-101`, colB: `Sample ${term} 1`, colC: "102394", colD: `PL-${dept}-01`,
+                    colE: "2026-08-05", colF: "1", colG: "CRON 01", colH: "720x1030", colI: "KBA 01",
+                    colJ: 10, colK: 1, colL: 9, colM: 1, colN: "Scratch", colO: "Urgent", colP: "Goresan",
+                    colQ: "Ahmad", colR: "Budi", colS: "HVS 80gr", colT: "Aus", colU: "-", colV: "BBM"
+                }
+            ];
         }
 
         function getItemTerm() {
@@ -191,6 +306,7 @@
 
         function removeData(id, callback) {
             const nodeName = dbSheets[state.activeSubTab];
+
             db.ref(`${nodeName}/${id}`).remove()
                 .then(() => callback(true))
                 .catch((error) => {
@@ -209,7 +325,7 @@
                                 <span class="text-2xl sm:text-3xl font-extrabold text-white">PS</span>
                             </div>
                             <h1 class="text-2xl font-bold text-white tracking-tight">Prepress Smart V1.0</h1>
-                            <p class="text-slate-400 text-xs sm:text-sm mt-1">Masukkan Username dan Password untuk masuk</p>
+                            <p class="text-slate-400 text-xs sm:text-sm mt-1">Otentikasi Google Sheets (DB_USER)</p>
                         </div>
 
                         <form onsubmit="handleLogin(event)" class="space-y-4">
@@ -219,7 +335,7 @@
                             </div>
 
                             <div>
-                                <label class="block text-xs font-medium text-slate-300 mb-1">Username</label>
+                                <label class="block text-xs font-medium text-slate-300 mb-1">Username (Kolom A)</label>
                                 <div class="relative">
                                     <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500 text-sm"><i class="fas fa-user"></i></span>
                                     <input type="text" id="login-username" required placeholder="Masukkan username" 
@@ -228,7 +344,7 @@
                             </div>
 
                             <div>
-                                <label class="block text-xs font-medium text-slate-300 mb-1">Password</label>
+                                <label class="block text-xs font-medium text-slate-300 mb-1">Password (Kolom C)</label>
                                 <div class="relative">
                                     <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500 text-sm"><i class="fas fa-lock"></i></span>
                                     <input type="password" id="login-password" required placeholder="••••••••" 
@@ -239,52 +355,14 @@
                                 </div>
                             </div>
 
-                            <div>
-                                <label class="block text-xs font-medium text-slate-300 mb-1">Role / Jabatan</label>
-                                <select id="login-role" class="w-full px-3.5 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-sm text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all">
-                                    <option value="manager">Manager</option>
-                                    <option value="supervisor">Supervisor</option>
-                                    <option value="koordinator">Koordinator</option>
-                                    <option value="operator">Operator</option>
-                                    <option value="umum">Umum (Read Only)</option>
-                                </select>
-                            </div>
-
-                            <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl shadow-lg shadow-blue-600/30 transition-all flex items-center justify-center gap-2 text-sm mt-2">
+                            <button type="submit" id="btn-login-submit" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl shadow-lg shadow-blue-600/30 transition-all flex items-center justify-center gap-2 text-sm mt-4">
                                 <span>Masuk ke Sistem</span>
                                 <i class="fas fa-arrow-right text-xs"></i>
                             </button>
                         </form>
-
-                        <div class="mt-6 pt-5 border-t border-slate-800">
-                            <p class="text-[11px] text-slate-400 font-medium mb-2 text-center uppercase tracking-wider">Uji Coba Cepat (Klik Akun Demo)</p>
-                            <div class="grid grid-cols-2 gap-1.5 sm:gap-2">
-                                ${[
-                                    { role: 'manager', user: 'manager', label: 'Manager' },
-                                    { role: 'supervisor', user: 'supervisor', label: 'Supervisor' },
-                                    { role: 'koordinator', user: 'koordinator', label: 'Koordinator' },
-                                    { role: 'operator', user: 'operator', label: 'Operator' },
-                                    { role: 'umum', user: 'umum', label: 'Umum' }
-                                ].map(acc => `
-                                    <button type="button" onclick="fillDemoAccount('${acc.user}', '${acc.role}')" 
-                                        class="py-2 px-2.5 bg-slate-800/80 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium text-left transition-colors border border-slate-700/60 truncate flex items-center justify-between">
-                                        <span class="truncate">${acc.label}</span>
-                                        <i class="fas fa-user-check text-[10px] text-blue-400 ml-1"></i>
-                                    </button>
-                                `).join('')}
-                            </div>
-                        </div>
                     </div>
                 </div>
             `;
-        }
-
-        function fillDemoAccount(username, role) {
-            document.getElementById('login-username').value = username;
-            document.getElementById('login-password').value = '123456';
-            document.getElementById('login-role').value = role;
-            const errDiv = document.getElementById('login-error');
-            if(errDiv) errDiv.classList.add('hidden');
         }
 
         function togglePasswordVisibility() {
@@ -301,29 +379,44 @@
             }
         }
 
-        function handleLogin(e) {
+        async function handleLogin(e) {
             e.preventDefault();
-            const username = document.getElementById('login-username').value.trim();
-            const password = document.getElementById('login-password').value.trim();
-            const role = document.getElementById('login-role').value;
+            const usernameInput = document.getElementById('login-username').value.trim();
+            const passwordInput = document.getElementById('login-password').value.trim();
             const errDiv = document.getElementById('login-error');
+            const submitBtn = document.getElementById('btn-login-submit');
 
-            if (!username || !password) {
+            if (!usernameInput || !passwordInput) {
                 document.getElementById('login-error-msg').innerText = "Harap isi Username dan Password!";
                 errDiv.classList.remove('hidden');
                 return;
             }
 
-            if (password.length < 4) {
-                document.getElementById('login-error-msg').innerText = "Password minimal 4 karakter!";
-                errDiv.classList.remove('hidden');
-                return;
-            }
-
             errDiv.classList.add('hidden');
-            state.username = username;
-            state.userRole = role;
-            fetchData();
+            const originalBtnHtml = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.classList.replace('bg-blue-600', 'bg-blue-800');
+            submitBtn.innerHTML = `<div class="loader !w-4 !h-4 !border-2"></div><span class="ml-2">Memeriksa Google Sheets DB_USER...</span>`;
+
+            const users = await fetchUsersFromGoogleSheets();
+            
+            const matchedUser = users.find(u => 
+                u.user.toLowerCase() === usernameInput.toLowerCase() && 
+                u.pass === passwordInput
+            );
+
+            if (matchedUser) {
+                state.username = matchedUser.user;
+                state.userRole = matchedUser.role || 'operator';
+                showToast(`Selamat datang, ${state.username} (${state.userRole})`, 'success');
+                fetchData();
+            } else {
+                submitBtn.disabled = false;
+                submitBtn.classList.replace('bg-blue-800', 'bg-blue-600');
+                submitBtn.innerHTML = originalBtnHtml;
+                document.getElementById('login-error-msg').innerText = "Username atau password salah / tidak ditemukan di DB_USER!";
+                errDiv.classList.remove('hidden');
+            }
         }
 
         function logout() {
@@ -397,7 +490,7 @@
                                 </div>
                                 <div class="truncate">
                                     <p class="text-xs font-semibold text-white truncate">${state.username || 'Pengguna'}</p>
-                                    <p class="text-[10px] text-blue-400 capitalize truncate">${state.userRole}</p>
+                                    <p class="text-[10px] text-blue-400 capitalize truncate">${state.userRole || 'Role'}</p>
                                 </div>
                             </div>
                             <button onclick="logout()" class="text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 p-2 rounded-lg transition-colors flex-shrink-0" title="Keluar">
@@ -420,9 +513,10 @@
                             </h2>
                         </div>
                         <div class="flex items-center gap-2">
-                            <span class="hidden sm:inline-block text-xs text-slate-500 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
-                                Node: <strong class="text-slate-700 font-mono">${dbSheets[state.activeSubTab]}</strong>
-                            </span>
+                            <a href="https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/edit" target="_blank" class="text-xs bg-emerald-50 text-emerald-700 hover:bg-emerald-100 px-3 py-1.5 rounded-lg border border-emerald-200 flex items-center gap-1.5 transition-colors">
+                                <i class="fas fa-file-excel"></i>
+                                <span class="hidden sm:inline">Google Sheets (${dbSheets[state.activeSubTab]})</span>
+                            </a>
                         </div>
                     </header>
 
@@ -430,7 +524,7 @@
                         ${state.isLoading ? `
                             <div class="absolute inset-0 flex flex-col items-center justify-center bg-slate-50/90 z-20 backdrop-blur-xs">
                                 <div class="loader mb-3"></div>
-                                <p class="text-slate-600 text-sm font-medium">Mengambil data dari Firebase (${dbSheets[state.activeSubTab]})...</p>
+                                <p class="text-slate-600 text-sm font-medium">Memuat Google Sheets (${dbSheets[state.activeSubTab]})...</p>
                             </div>
                         ` : ''}
                     </main>
@@ -516,7 +610,7 @@
                     <div class="flex flex-wrap justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-slate-200 no-print">
                         <div>
                             <h2 class="text-lg font-bold text-slate-800"><i class="fas fa-chart-line text-blue-500 mr-2"></i> Dashboard Kinerja - ${state.activeSubTab}</h2>
-                            <p class="text-xs text-slate-500">Istilah unit yang digunakan: <strong class="text-blue-600">${term}</strong></p>
+                            <p class="text-xs text-slate-500">Istilah unit: <strong class="text-blue-600">${term}</strong> | Sheet: <strong class="font-mono text-slate-700">${dbSheets[state.activeSubTab]}</strong></p>
                         </div>
                         <div class="flex flex-wrap items-center gap-2 mt-3 sm:mt-0 filter-bar">
                             <input type="date" id="dash-start-date" value="${state.startDate}" class="p-2 border rounded-lg text-sm bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none">
@@ -807,7 +901,7 @@
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-100">
-                                    ${state.data.length === 0 ? `<tr><td colspan="${cols.length + 1}" class="text-center py-12 text-slate-400">Tidak ada data tersimpan di Firebase.</td></tr>` : ''}
+                                    ${state.data.length === 0 ? `<tr><td colspan="${cols.length + 1}" class="text-center py-12 text-slate-400">Tidak ada data tersimpan.</td></tr>` : ''}
                                     ${state.data.map((row, index) => `
                                         <tr class="hover:bg-blue-50/60 transition-colors cursor-pointer group" onclick="openFullRowDetailByIndex(${index})">
                                             ${cols.map(colKey => `
@@ -899,7 +993,7 @@
                         </div>
                         <form id="dataForm" onsubmit="handleSave(event)" class="overflow-y-auto p-6 relative flex-1">
                             <div id="form-overlay" class="hidden absolute inset-0 bg-white/80 z-10 flex items-center justify-center">
-                                <div class="loader"></div><span class="ml-2 font-medium text-slate-600">Menyimpan ke Firebase...</span>
+                                <div class="loader"></div><span class="ml-2 font-medium text-slate-600">Menyimpan...</span>
                             </div>
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4">
                                 ${createInput('colA', columnLabels.colA, item.colA, 'text', true)}
@@ -927,7 +1021,7 @@
                             </div>
                             <div class="mt-8 pt-4 border-t flex justify-end gap-3 sticky bottom-0 bg-white">
                                 <button type="button" onclick="closeModal(null, 'form-modal')" class="px-5 py-2 bg-slate-100 text-slate-600 rounded-lg font-medium hover:bg-slate-200">Batal</button>
-                                <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm font-medium"><i class="fas fa-save mr-1"></i> Simpan ke Firebase</button>
+                                <button type="submit" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-sm font-medium"><i class="fas fa-save mr-1"></i> Simpan</button>
                             </div>
                         </form>
                     </div>
@@ -962,11 +1056,11 @@
             persistData(newItem, isNew, function(success) {
                 if(success) {
                     closeModal(null, 'form-modal');
-                    showToast('Data berhasil disimpan ke Firebase!', 'success');
+                    showToast('Data berhasil disimpan!', 'success');
                     fetchData();
                 } else {
                     document.getElementById('form-overlay').classList.add('hidden');
-                    showToast('Gagal menyimpan data ke Firebase.', 'error');
+                    showToast('Gagal menyimpan data.', 'error');
                 }
             });
         }
@@ -983,7 +1077,7 @@
                             <i class="fas fa-trash-alt"></i>
                         </div>
                         <h3 class="text-lg font-bold text-slate-800 mb-1">Hapus Data ID: ${item.colA}?</h3>
-                        <p class="text-slate-500 text-xs mb-6">Tindakan ini akan menghapus data secara permanen dari Firebase.</p>
+                        <p class="text-slate-500 text-xs mb-6">Tindakan ini akan menghapus data secara permanen.</p>
                         <div class="flex gap-3 justify-center">
                             <button onclick="closeModal(null, 'confirm-modal')" class="px-4 py-2 bg-slate-100 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-200">Batal</button>
                             <button onclick="executeDelete(${index}, '${item.colA}')" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-sm font-medium shadow-sm">Ya, Hapus</button>
@@ -999,11 +1093,11 @@
             removeData(id, function(success) {
                 if(success) {
                     closeModal(null, 'confirm-modal');
-                    showToast('Data berhasil dihapus dari Firebase.', 'success');
+                    showToast('Data berhasil dihapus.', 'success');
                     fetchData();
                 } else {
                     document.getElementById('delete-overlay').classList.add('hidden');
-                    showToast('Gagal menghapus data dari Firebase.', 'error');
+                    showToast('Gagal menghapus data.', 'error');
                 }
             });
         }
