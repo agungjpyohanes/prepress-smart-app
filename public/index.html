@@ -83,31 +83,34 @@
             'ETCHING': 'Plate'
         };
 
-        // Pemetaan Kolom per Departemen (SCREEN: 14 Kolom)
+        // Pemetaan Kolom per Departemen (CTP diset 17 Kolom)
         const deptColumns = {
             'CTCP': ['colA', 'colB', 'colC', 'colD', 'colE', 'colF', 'colG', 'colH', 'colI', 'colJ', 'colK', 'colL', 'colM', 'colN', 'colO', 'colP', 'colQ', 'colR'],
             'CTP': ['colA', 'colB', 'colC', 'colD', 'colE', 'colF', 'colG', 'colH', 'colI', 'colJ', 'colK', 'colL', 'colM', 'colN', 'colO', 'colP', 'colQ'],
-            'SCREEN': ['colA', 'colB', 'colC', 'colD', 'colE', 'colF', 'colG', 'colH', 'colI', 'colJ', 'colK', 'colL', 'colM', 'colN'],
+            'SCREEN': ['colA', 'colB', 'colC', 'colD', 'colE', 'colF', 'colG'],
             'FLEXO': ['colA', 'colB', 'colC', 'colD', 'colE', 'colF', 'colG', 'colH', 'colI'],
             'ETCHING': ['colA', 'colB', 'colC', 'colD', 'colE', 'colF', 'colG', 'colH']
         };
 
-        // Label Kolom SCREEN (1 - 14)
+        // Label Kolom CTP (1 - 17)
         const columnLabels = {
             colA: 'ID (1)',
             colB: 'JOP NAME (2)',
             colC: 'NO JOP (3)',
-            colD: 'NO B (4)',
-            colE: 'TIPE (5)',
-            colF: 'STATUS (6)',
-            colG: 'DATE (7)',
-            colH: 'Jumlah Screen Bagus (8)',
-            colI: 'Jumlah Screen Rusak (9)',
-            colJ: 'Jumlah Screen Ganti (10)',
-            colK: 'Penyebab Rusak (11)',
-            colL: 'Penyebab Ganti (12)',
-            colM: 'SHIFT (13)',
-            colN: 'NAMA OP (14)'
+            colD: 'NO PLATE (4)',
+            colE: 'DATE (5)',
+            colF: 'MESIN EXPOSE (6)',
+            colG: 'MESIN CETAK (7)',
+            colH: 'JENIS KERTAS (8)',
+            colI: 'PLATE BARU (9)',
+            colJ: 'PLATE GANTI (10)',
+            colK: 'PLATE BAIK (11)',
+            colL: 'PLATE RUSAK (12)',
+            colM: 'PENYEBAB GANTI (13)',
+            colN: 'PERMINTAAN KHUSUS (14)',
+            colO: 'PENYEBAB RUSAK (15)',
+            colP: 'SHIFT (16)',
+            colQ: 'NAMA OP (17)'
         };
 
         const defaultStartDate = '2026-08-01';
@@ -117,7 +120,7 @@
             userRole: null, 
             username: null,
             activeMainTab: 'dashboard', 
-            activeSubTab: 'SCREEN', 
+            activeSubTab: 'CTP', 
             startDate: defaultStartDate,
             endDate: defaultEndDate,
             data: [], 
@@ -190,16 +193,19 @@
                             colB: String(getVal(1) || ''),
                             colC: String(getVal(2) || ''),
                             colD: String(getVal(3) || ''),
-                            colE: String(getVal(4) || ''),
+                            colE: String(getVal(4) ? String(getVal(4)).split('T')[0] : '2026-08-05'),
                             colF: String(getVal(5) || ''),
-                            colG: String(getVal(6) ? String(getVal(6)).split('T')[0] : '2026-08-05'), // Date (7)
-                            colH: Number(getVal(7)) || 5,  // Jumlah Screen Bagus (8)
-                            colI: Number(getVal(8)) || 0,  // Jumlah Screen Rusak (9)
-                            colJ: Number(getVal(9)) || 0,  // Jumlah Screen Ganti (10)
-                            colK: String(getVal(10) || ''), // Penyebab Rusak (11)
-                            colL: String(getVal(11) || ''), // Penyebab Ganti (12)
-                            colM: String(getVal(12) || '1'),// SHIFT (13)
-                            colN: String(getVal(13) || '')  // NAMA OP (14)
+                            colG: String(getVal(6) || ''),
+                            colH: String(getVal(7) || ''),
+                            colI: Number(getVal(8)) || 0,
+                            colJ: Number(getVal(9)) || 0,  // Kolom 10: Plate Ganti
+                            colK: Number(getVal(10)) || 5, // Kolom 11: Plate Baik
+                            colL: Number(getVal(11)) || 0, // Kolom 12: Plate Rusak
+                            colM: String(getVal(12) || ''),
+                            colN: String(getVal(13) || ''),
+                            colO: String(getVal(14) || ''),
+                            colP: String(getVal(15) || '1'),
+                            colQ: String(getVal(16) || '')
                         };
                         
                         if (rowObj.colA && rowObj.colA.toLowerCase() !== 'id (1)' && rowObj.colA.toLowerCase() !== 'id') {
@@ -222,7 +228,7 @@
             let sheetData = await fetchSheetFromGoogleSheets(sheetName);
             
             if (sheetData && sheetData.length > 0) {
-                state.data = sheetData.sort((a, b) => new Date(a.colG) - new Date(b.colG));
+                state.data = sheetData.sort((a, b) => new Date(a.colE) - new Date(b.colE));
                 state.isLoading = false;
                 updateContent();
             } else {
@@ -230,7 +236,7 @@
                     .then((snapshot) => {
                         const rawData = snapshot.val();
                         if (rawData && Object.keys(rawData).length > 0) {
-                            state.data = Object.values(rawData).sort((a, b) => new Date(a.colG) - new Date(b.colG));
+                            state.data = Object.values(rawData).sort((a, b) => new Date(a.colE) - new Date(b.colE));
                         } else {
                             state.data = generateSampleData(state.activeSubTab);
                         }
@@ -250,15 +256,16 @@
             const term = deptTerms[dept];
             return [
                 {
-                    colA: `${dept}-101`, colB: `Sample ${term} 1`, colC: "102394", colD: "B-01",
-                    colE: "Standard", colF: "Active", colG: "2026-08-05", colH: 10,
-                    colI: 1, colJ: 2, colK: "Sobek", colL: "Aus", colM: "1", colN: "Ahmad"
+                    colA: `${dept}-101`, colB: `Sample ${term} 1`, colC: "102394", colD: `PL-${dept}-01`,
+                    colE: "2026-08-05", colF: "CRON 01", colG: "KBA 01", colH: "HVS 80gr",
+                    colI: 10, colJ: 1, colK: 9, colL: 1, colM: "Scratch", colN: "Urgent", colO: "Goresan",
+                    colP: "1", colQ: "Ahmad"
                 }
             ];
         }
 
         function getItemTerm() {
-            return deptTerms[state.activeSubTab] || 'Screen';
+            return deptTerms[state.activeSubTab] || 'Plate';
         }
 
         function persistData(itemObj, isNew, callback) {
@@ -488,7 +495,7 @@
                             </h2>
                         </div>
                         <div class="flex items-center gap-2">
-                            <!-- Link Spreadsheet dan Info Istilah dihilangkan untuk SCREEN -->
+                            <!-- Link Spreadsheet dan Info Istilah dihilangkan untuk CTP sesuai permintaan -->
                         </div>
                     </header>
 
@@ -549,13 +556,14 @@
 
         function getFilteredData() {
             if (!state.startDate || !state.endDate) return state.data;
-            const startStr = state.startDate; 
-            const endStr = state.endDate;     
+            const start = new Date(state.startDate);
+            const end = new Date(state.endDate);
+            end.setHours(23, 59, 59); 
             
             return state.data.filter(d => {
-                if(!d.colG) return false;
-                const itemDateStr = String(d.colG).split('T')[0];
-                return itemDateStr >= startStr && itemDateStr <= endStr;
+                if(!d.colE) return false;
+                const itemDate = new Date(d.colE);
+                return itemDate >= start && itemDate <= end;
             });
         }
 
@@ -570,18 +578,17 @@
             const filteredData = getFilteredData();
             const term = getItemTerm();
             
-            // Rumus khusus Dashboard SCREEN:
-            // Total Screen Baik = kolom 8 (colH)
-            // Total Screen Rusak = kolom 9 (colI)
-            // Total Screen Ganti = kolom 10 (colJ)
-            // Persentase Ganti = (kolom 10 / kolom 8) * 100%
-            // Persentase Rusak = (kolom 9 / kolom 8) * 100%
-            const totalBaik = filteredData.reduce((sum, item) => sum + (Number(item.colH) || 0), 0);
-            const totalRusak = filteredData.reduce((sum, item) => sum + (Number(item.colI) || 0), 0);
+            // Perhitungan rumus khusus CTP:
+            // Total Plate Baik = kolom 11 (colK)
+            // Total Plate Rusak = kolom 12 (colL)
+            // Total Plate Ganti = kolom 10 (colJ)
+            // Total Penggunaan = kolom 11 (colK) + kolom 12 (colL)
+            // Persentase Rusak = (kolom 12 / (kolom 11 + kolom 12)) * 100%
+            const totalBaik = filteredData.reduce((sum, item) => sum + (Number(item.colK) || 0), 0);
+            const totalRusak = filteredData.reduce((sum, item) => sum + (Number(item.colL) || 0), 0);
             const totalGanti = filteredData.reduce((sum, item) => sum + (Number(item.colJ) || 0), 0);
-            
-            const pctGanti = totalBaik > 0 ? ((totalGanti / totalBaik) * 100).toFixed(1) : 0;
-            const pctRusak = totalBaik > 0 ? ((totalRusak / totalBaik) * 100).toFixed(1) : 0;
+            const totalPenggunaan = totalBaik + totalRusak;
+            const pctRusak = totalPenggunaan > 0 ? ((totalRusak / totalPenggunaan) * 100).toFixed(1) : 0;
 
             container.innerHTML = `
                 <div class="max-w-7xl mx-auto space-y-6">
@@ -606,14 +613,14 @@
                         ${createCard(`Total ${term} Baik`, totalBaik, 'pcs', 'fa-check-circle', 'text-emerald-500', 'bg-emerald-50', 'baik')}
                         ${createCard(`Total ${term} Rusak`, totalRusak, 'pcs', 'fa-times-circle', 'text-rose-500', 'bg-rose-50', 'rusak')}
                         ${createCard(`Total ${term} Ganti`, totalGanti, 'pcs', 'fa-sync', 'text-amber-500', 'bg-amber-50', 'ganti')}
-                        ${createCard('Persentase Ganti', pctGanti, '%', 'fa-percentage', 'text-blue-500', 'bg-blue-50', 'pctGanti')}
-                        ${createCard('Persentase Rusak', pctRusak, '%', 'fa-percent', 'text-purple-500', 'bg-purple-50', 'pctRusak')}
+                        ${createCard('Total Penggunaan', totalPenggunaan, 'pcs', 'fa-layer-group', 'text-blue-500', 'bg-blue-50', 'penggunaan')}
+                        ${createCard('Persentase Rusak', pctRusak, '%', 'fa-percent', 'text-purple-500', 'bg-purple-50', 'persentase')}
                     </div>
 
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div class="lg:col-span-3 bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
                             <div class="flex justify-between items-center mb-4 pb-2 border-b">
-                                <h3 class="font-semibold text-slate-700">Grafik Produksi ${term} Harian</h3>
+                                <h3 class="font-semibold text-slate-700">Grafik Penggunaan ${term} Harian</h3>
                                 <span class="text-xs text-blue-500 bg-blue-50 px-2 py-1 rounded"><i class="fas fa-mouse-pointer mr-1"></i>Klik poin grafik untuk detail</span>
                             </div>
                             <div class="h-72"><canvas id="chartDaily"></canvas></div>
@@ -627,10 +634,10 @@
                         </div>
                         <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
                             <div class="flex justify-between items-center mb-4 pb-2 border-b">
-                                <h3 class="font-semibold text-slate-700">Kategori Jenis Screen (Tipe)</h3>
+                                <h3 class="font-semibold text-slate-700">Mesin Expose</h3>
                                 <span class="text-xs text-emerald-500 bg-emerald-50 px-2 py-1 rounded"><i class="fas fa-mouse-pointer mr-1"></i>Klik diagram</span>
                             </div>
-                            <div class="h-80"><canvas id="chartTipe"></canvas></div>
+                            <div class="h-80"><canvas id="chartMesin"></canvas></div>
                         </div>
                     </div>
                 </div>
@@ -644,7 +651,7 @@
                     <div class="flex justify-between items-start z-10">
                         <div>
                             <p class="text-xs font-medium text-slate-500 mb-1 uppercase tracking-wide">${title}</p>
-                            <h3 class="text-2xl font-bold text-slate-800 group-hover:text-blue-600 transition-colors">${typeof value === 'number' ? value.toLocaleString() : value} <span class="text-xs text-slate-400 font-normal">${unit}</span></h3>
+                            <h3 class="text-2xl font-bold text-slate-800 group-hover:text-blue-600 transition-colors">${value.toLocaleString()} <span class="text-xs text-slate-400 font-normal">${unit}</span></h3>
                         </div>
                         <div class="w-10 h-10 rounded-xl ${bgColor} flex items-center justify-center group-hover:scale-110 transition-transform">
                             <i class="fas ${icon} ${iconColor} text-lg"></i>
@@ -670,13 +677,13 @@
 
             const term = getItemTerm();
 
-            // Grafik Produksi Harian: Berdasarkan tanggal kolom 7 (colG) dan nilai Jumlah Screen Bagus (kolom 8 / colH)
+            // Grafik Penggunaan Harian: Berdasarkan tanggal kolom 5 (colE) dan nilai penggunaan (kolom 11 + kolom 12 / colK + colL)
             const dailyMap = {};
             data.forEach(d => {
-                const date = d.colG;
+                const date = d.colE;
                 if(!date) return;
-                const bagus = Number(d.colH) || 0;
-                dailyMap[date] = (dailyMap[date] || 0) + bagus;
+                const usage = (Number(d.colK) || 0) + (Number(d.colL) || 0);
+                dailyMap[date] = (dailyMap[date] || 0) + usage;
             });
             const sortedDates = Object.keys(dailyMap).sort();
             
@@ -687,7 +694,7 @@
                     data: {
                         labels: sortedDates,
                         datasets: [{ 
-                            label: `Produksi ${term} Bagus`, 
+                            label: `Penggunaan ${term}`, 
                             data: sortedDates.map(date => dailyMap[date]), 
                             borderColor: '#3b82f6', 
                             backgroundColor: 'rgba(59, 130, 246, 0.1)', 
@@ -705,8 +712,8 @@
                             if (elements.length > 0) {
                                 const index = elements[0].index;
                                 const clickedDate = sortedDates[index];
-                                const items = data.filter(d => d.colG === clickedDate);
-                                showDetailModal(`Detail Produksi ${term} Tanggal: ${clickedDate}`, items);
+                                const items = data.filter(d => d.colE === clickedDate);
+                                showDetailModal(`Detail Penggunaan ${term} Tanggal: ${clickedDate}`, items);
                             }
                         }
                     }
@@ -744,20 +751,20 @@
                 });
             }
 
-            // Kategori Jenis Screen (Tipe): Dari kolom 5 (colE)
-            const tipeMap = {};
+            // Mesin Expose: Dari kolom 6 (colF)
+            const mesinMap = {};
             data.forEach(d => {
-                const t = d.colE || 'Tidak Diketahui';
-                tipeMap[t] = (tipeMap[t] || 0) + 1;
+                const m = d.colF || 'Tidak Diketahui';
+                mesinMap[m] = (mesinMap[m] || 0) + 1;
             });
-            const tipeCanvas = document.getElementById('chartTipe');
-            if(tipeCanvas) {
-                const tipeList = Object.keys(tipeMap);
-                state.charts.tipe = new Chart(tipeCanvas, {
+            const mesinCanvas = document.getElementById('chartMesin');
+            if(mesinCanvas) {
+                const mesinList = Object.keys(mesinMap);
+                state.charts.mesin = new Chart(mesinCanvas, {
                     type: 'doughnut',
                     data: {
-                        labels: tipeList,
-                        datasets: [{ data: Object.values(tipeMap), backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'], borderWidth: 0 }]
+                        labels: mesinList,
+                        datasets: [{ data: Object.values(mesinMap), backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'], borderWidth: 0 }]
                     },
                     options: { 
                         responsive: true, 
@@ -766,9 +773,9 @@
                         onClick: (e, elements) => {
                             if (elements.length > 0) {
                                 const index = elements[0].index;
-                                const tipeName = tipeList[index];
-                                const items = data.filter(d => (d.colE || 'Tidak Diketahui') === tipeName);
-                                showDetailModal(`Detail Tipe Screen: ${tipeName}`, items);
+                                const mesinName = mesinList[index];
+                                const items = data.filter(d => (d.colF || 'Tidak Diketahui') === mesinName);
+                                showDetailModal(`Detail Mesin Expose: ${mesinName}`, items);
                             }
                         }
                     }
@@ -783,16 +790,16 @@
             let title = '';
 
             if (type === 'baik') {
-                title = `Daftar ${term} Bagus`;
-                items = data.filter(d => Number(d.colH) > 0);
-            } else if (type === 'rusak' || type === 'pctRusak') {
+                title = `Daftar ${term} Baik`;
+                items = data.filter(d => Number(d.colK) > 0);
+            } else if (type === 'rusak') {
                 title = `Daftar ${term} Rusak`;
-                items = data.filter(d => Number(d.colI) > 0);
-            } else if (type === 'ganti' || type === 'pctGanti') {
+                items = data.filter(d => Number(d.colL) > 0);
+            } else if (type === 'ganti') {
                 title = `Daftar ${term} Ganti`;
                 items = data.filter(d => Number(d.colJ) > 0);
             } else {
-                title = `Seluruh Transaksi ${term}`;
+                title = `Seluruh Transaksi Penggunaan ${term}`;
                 items = data;
             }
 
@@ -816,20 +823,24 @@
                                 <thead class="bg-slate-100 border-b text-slate-600 sticky top-0">
                                     <tr>
                                         ${cols.map(c => `<th class="py-2.5 px-3 font-semibold ${c==='colB'?'max-w-[120px] truncate':''}">${columnLabels[c]}</th>`).join('')}
+                                        <th class="py-2.5 px-3 font-semibold text-center">BAIK</th>
+                                        <th class="py-2.5 px-3 font-semibold text-center">RUSAK</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-slate-100">
-                                    ${items.length === 0 ? `<tr><td colspan="${cols.length}" class="text-center py-8 text-slate-400">Tidak ada data rincian.</td></tr>` : ''}
+                                    ${items.length === 0 ? `<tr><td colspan="${cols.length + 2}" class="text-center py-8 text-slate-400">Tidak ada data rincian.</td></tr>` : ''}
                                     ${items.map(row => `
                                         <tr class="hover:bg-slate-50 transition-colors cursor-pointer" onclick="openFullRowDetail('${row.colA}')">
-                                            ${cols.map(c => `<td class="py-2.5 px-3 ${c==='colB'?'max-w-[120px] truncate':''}">${row[c] !== undefined && row[c] !== '' ? row[c] : '-'}</td>`).join('')}
+                                            ${cols.map(c => `<td class="py-2.5 px-3 ${c==='colB'?'max-w-[120px] truncate':''}">${row[c] || '-'}</td>`).join('')}
+                                            <td class="py-2.5 px-3 text-center text-emerald-600 font-bold">${row.colK || 0}</td>
+                                            <td class="py-2.5 px-3 text-center text-rose-600 font-bold">${row.colL || 0}</td>
                                         </tr>
                                     `).join('')}
                                 </tbody>
                             </table>
                         </div>
                         <div class="px-6 py-3 bg-slate-50 border-t flex justify-between items-center text-xs text-slate-500">
-                            <span>* Klik pada salah satu baris untuk melihat rincian penuh</span>
+                            <span>* Klik pada salah satu baris untuk melihat seluruh data lengkap</span>
                             <button onclick="closeModal(null, 'detail-modal')" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 font-medium">Tutup</button>
                         </div>
                     </div>
@@ -843,15 +854,15 @@
             const isReadOnly = state.userRole === 'umum';
             const term = getItemTerm();
             
-            // Batasi tampilan tabel utama hanya Kolom 1 sampai 7 (colA s.d colG)
-            const cols = ['colA', 'colB', 'colC', 'colD', 'colE', 'colF', 'colG'];
+            // Batasi tampilan tabel utama hanya Kolom 1 sampai 5 (colA s.d colE)
+            const cols = ['colA', 'colB', 'colC', 'colD', 'colE'];
             
             container.innerHTML = `
                 <div class="max-w-7xl mx-auto h-full flex flex-col print-container">
                     <div class="flex flex-wrap justify-between items-center mb-6 gap-4 no-print">
                         <div>
                             <h2 class="text-xl font-bold text-slate-800"><i class="fas fa-database text-emerald-500 mr-2"></i> Database JOP - ${state.activeSubTab}</h2>
-                            <p class="text-sm text-slate-500 mt-0.5">Menampilkan Kolom 1 - 7. <strong class="text-blue-600">Klik pada baris data</strong> untuk melihat rincian lengkap.</p>
+                            <p class="text-sm text-slate-500 mt-0.5">Menampilkan Kolom 1 - 5. <strong class="text-blue-600">Klik pada baris data</strong> untuk melihat rincian lengkap.</p>
                         </div>
                         <div class="flex items-center gap-2">
                             <button onclick="printDatabase()" class="bg-slate-700 hover:bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm flex items-center transition-colors">
@@ -926,7 +937,7 @@
                     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden" onclick="event.stopPropagation()">
                         <div class="px-6 py-4 border-b flex justify-between items-center bg-slate-800 text-white">
                             <div>
-                                <h3 class="text-lg font-bold"><i class="fas fa-file-alt text-blue-400 mr-2"></i> Rincian Lengkap Data SCREEN</h3>
+                                <h3 class="text-lg font-bold"><i class="fas fa-file-alt text-blue-400 mr-2"></i> Rincian Lengkap Data</h3>
                                 <p class="text-xs text-slate-300">ID Data: ${item.colA || '-'}</p>
                             </div>
                             <button onclick="closeModal(null, 'full-detail-modal')" class="text-slate-400 hover:text-white p-1"><i class="fas fa-times text-xl"></i></button>
@@ -958,7 +969,7 @@
                 state.editIndex = index;
             } else {
                 item = { 
-                    colG: new Date().toISOString().split('T')[0],
+                    colE: new Date().toISOString().split('T')[0],
                     colA: `${state.activeSubTab}-${Date.now().toString().slice(-5)}` 
                 };
             }
@@ -980,8 +991,8 @@
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4">
                                 ${cols.map(key => {
                                     let type = 'text';
-                                    if (key === 'colG') type = 'date';
-                                    if (['colH','colI','colJ'].includes(key)) type = 'number';
+                                    if (key === 'colE') type = 'date';
+                                    if (['colI','colJ','colK','colL'].includes(key)) type = 'number';
                                     let readonly = (key === 'colA');
                                     return createInput(key, columnLabels[key], item[key], type, readonly);
                                 }).join('')}
