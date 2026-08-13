@@ -1,0 +1,60 @@
+import { GOOGLE_SHEET_ID } from './config.js';
+
+export async function fetchUsersFromGoogleSheets() {
+    const url = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:json&sheet=DB_USER`;
+    try {
+        const response = await fetch(url);
+        const text = await response.text();
+        const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);?/);
+        if (!match || !match[1]) throw new Error("Format respons tidak valid");
+        
+        const jsonData = JSON.parse(match[1]);
+        const users = [];
+        jsonData.table.rows.forEach(r => {
+            if (r && r.c) {
+                const getVal = (cell) => cell ? (cell.f !== undefined ? cell.f : (cell.v !== undefined ? cell.v : '')) : '';
+                const u = getVal(r.c[0]), role = getVal(r.c[1]), pass = getVal(r.c[2]);
+                const parsedUser = String(u).trim();
+                if (parsedUser && parsedUser.toLowerCase() !== 'user') { 
+                    users.push({ user: parsedUser, role: String(role).trim().toLowerCase(), pass: String(pass).trim() });
+                }
+            }
+        });
+        return users;
+    } catch (err) {
+        console.error('Error fetching users:', err);
+        return [];
+    }
+}
+
+export async function fetchSheetFromGoogleSheets(sheetName) {
+    const url = `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?tqx=out:json&sheet=${sheetName}`;
+    try {
+        const response = await fetch(url);
+        const text = await response.text();
+        const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);?/);
+        if (!match || !match[1]) throw new Error("Format respons tidak valid");
+        
+        const jsonData = JSON.parse(match[1]);
+        const rows = [];
+        jsonData.table.rows.forEach((r, idx) => {
+            if (r && r.c) {
+                const getVal = (colIndex) => r.c[colIndex] ? (r.c[colIndex].f !== undefined ? r.c[colIndex].f : r.c[colIndex].v) : '';
+                const rowObj = {
+                    colA: String(getVal(0) || `ID-${idx+1}`), colB: String(getVal(1) || ''),
+                    colC: String(getVal(2) || ''), colD: String(getVal(3) || ''),
+                    colE: String(getVal(4) || ''), colF: String(getVal(5) || ''),
+                    colG: String(getVal(6) ? String(getVal(6)).split('T')[0] : '2026-08-05'),
+                    colH: Number(getVal(7)) || 5, colI: Number(getVal(8)) || 0,
+                    colJ: Number(getVal(9)) || 0, colK: String(getVal(10) || ''),
+                    colL: String(getVal(11) || ''), colM: String(getVal(12) || '1'), colN: String(getVal(13) || '')
+                };
+                if (rowObj.colA && rowObj.colA.toLowerCase() !== 'id (1)') rows.push(rowObj);
+            }
+        });
+        return rows;
+    } catch (err) {
+        console.error(`Error sheet ${sheetName}:`, err);
+        return null;
+    }
+}

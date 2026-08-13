@@ -1,0 +1,157 @@
+import { state, departments, deptColumns, columnLabels } from './config.js';
+
+export function renderLogin() {
+    document.getElementById('app').innerHTML = `
+        <div class="flex items-center justify-center w-full min-h-screen bg-slate-950 text-white p-4">
+            <div class="bg-slate-900 p-6 sm:p-8 rounded-3xl shadow-2xl w-full max-w-md border border-slate-800">
+                <div class="text-center mb-6">
+                    <h1 class="text-2xl font-bold text-white tracking-tight">Prepress Smart V1.0</h1>
+                    <p class="text-slate-400 text-xs mt-1">Otentikasi Google Sheets (DB_USER)</p>
+                </div>
+                <form id="login-form" class="space-y-4">
+                    <div id="login-error" class="hidden p-3 bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs rounded-xl">
+                        <span>Username atau password salah!</span>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Username</label>
+                        <input type="text" id="login-username" required class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm text-white">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-300 mb-1">Password</label>
+                        <input type="password" id="login-password" required class="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-sm text-white">
+                    </div>
+                    <button type="submit" class="w-full py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-xl text-sm mt-4">Masuk ke Sistem</button>
+                </form>
+            </div>
+        </div>
+    `;
+}
+
+export function renderMain() {
+    document.getElementById('app').innerHTML = `
+        <aside id="sidebar" class="bg-slate-900 text-slate-300 w-64 flex flex-col justify-between border-r border-slate-800">
+            <div class="p-5 border-b border-slate-800">
+                <h1 class="font-bold text-white text-base">Prepress Smart</h1>
+            </div>
+            <div class="p-4 space-y-4">
+                <div>
+                    <p class="text-xs font-semibold text-slate-400 uppercase mb-2">Dashboard</p>
+                    ${departments.map(dept => `<button data-tab="dashboard" data-dept="${dept}" class="nav-btn w-full text-left px-3 py-2 rounded-xl text-sm ${state.activeMainTab === 'dashboard' && state.activeSubTab === dept ? 'bg-blue-600 text-white' : 'text-slate-400'}">${dept}</button>`).join('')}
+                </div>
+                <div>
+                    <p class="text-xs font-semibold text-slate-400 uppercase mb-2">Database</p>
+                    ${departments.map(dept => `<button data-tab="database" data-dept="${dept}" class="nav-btn w-full text-left px-3 py-2 rounded-xl text-sm ${state.activeMainTab === 'database' && state.activeSubTab === dept ? 'bg-emerald-600 text-white' : 'text-slate-400'}">${dept}</button>`).join('')}
+                </div>
+            </div>
+            <div class="p-4 border-t border-slate-800 flex justify-between items-center text-xs">
+                <span>${state.username}</span>
+                <button id="logout-btn" class="text-rose-400"><i class="fas fa-sign-out-alt"></i></button>
+            </div>
+        </aside>
+        <div class="flex-1 flex flex-col h-full overflow-hidden">
+            <header class="bg-white border-b px-6 py-3 flex justify-between items-center">
+                <h2 class="font-bold text-slate-800 uppercase">${state.activeMainTab} - ${state.activeSubTab}</h2>
+            </header>
+            <main id="main-content" class="flex-1 overflow-y-auto bg-slate-50 p-6"></main>
+        </div>
+        <div id="modal-container"></div>
+    `;
+    if(!state.isLoading) updateContent();
+}
+
+export function updateContent() {
+    const container = document.getElementById('main-content');
+    if (state.activeMainTab === 'dashboard') renderDashboard(container);
+    else if (state.activeMainTab === 'database') renderDatabase(container);
+}
+
+function getFilteredData() {
+    if (!state.startDate || !state.endDate) return state.data;
+    return state.data.filter(d => d.colG && d.colG.split('T')[0] >= state.startDate && d.colG.split('T')[0] <= state.endDate);
+}
+
+function renderDashboard(container) {
+    const filteredData = getFilteredData();
+    const totalBaik = filteredData.reduce((sum, item) => sum + (Number(item.colH) || 0), 0);
+    const totalRusak = filteredData.reduce((sum, item) => sum + (Number(item.colI) || 0), 0);
+    const totalGanti = filteredData.reduce((sum, item) => sum + (Number(item.colJ) || 0), 0);
+    const pctGanti = totalBaik > 0 ? ((totalGanti / totalBaik) * 100).toFixed(1) : 0;
+    const pctRusak = totalBaik > 0 ? ((totalRusak / totalBaik) * 100).toFixed(1) : 0;
+
+    container.innerHTML = `
+        <div class="space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <div class="bg-white p-4 rounded-xl shadow-sm border">Baik: <h3 class="text-xl font-bold">${totalBaik}</h3></div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border">Rusak: <h3 class="text-xl font-bold">${totalRusak}</h3></div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border">Ganti: <h3 class="text-xl font-bold">${totalGanti}</h3></div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border">% Ganti: <h3 class="text-xl font-bold">${pctGanti}%</h3></div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border">% Rusak: <h3 class="text-xl font-bold">${pctRusak}%</h3></div>
+            </div>
+            <div class="bg-white p-5 rounded-xl shadow-sm border h-72"><canvas id="chartDaily"></canvas></div>
+        </div>
+    `;
+    setTimeout(() => initCharts(filteredData), 50);
+}
+
+function initCharts(data) {
+    if (state.charts.daily) state.charts.daily.destroy();
+    const dailyMap = {};
+    data.forEach(d => { if(d.colG) dailyMap[d.colG] = (dailyMap[d.colG] || 0) + (Number(d.colH) || 0); });
+    const dates = Object.keys(dailyMap).sort();
+    
+    const ctx = document.getElementById('chartDaily');
+    if (ctx) {
+        state.charts.daily = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: dates,
+                datasets: [{ label: 'Produksi Bagus', data: dates.map(d => dailyMap[d]), borderColor: '#3b82f6', fill: true }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
+}
+
+function renderDatabase(container) {
+    const cols = ['colA', 'colB', 'colC', 'colD', 'colE', 'colF', 'colG'];
+    container.innerHTML = `
+        <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+            <table class="w-full text-left text-sm">
+                <thead class="bg-slate-50 border-b">
+                    <tr>${cols.map(c => `<th class="py-3 px-4">${columnLabels[c]}</th>`).join('')}</tr>
+                </thead>
+                <tbody class="divide-y" id="db-table-body">
+                    ${state.data.map((row) => `
+                        <tr class="hover:bg-blue-50 cursor-pointer data-row" data-id="${row.colA}">
+                            ${cols.map(c => `<td class="py-3 px-4">${row[c] || '-'}</td>`).join('')}
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    document.getElementById('db-table-body').addEventListener('click', (e) => {
+        const tr = e.target.closest('.data-row');
+        if (tr) openFullRowDetail(tr.dataset.id);
+    });
+}
+
+export function openFullRowDetail(id) {
+    const item = state.data.find(d => d.colA === id);
+    if(!item) return;
+    const allCols = deptColumns[state.activeSubTab];
+    document.getElementById('modal-container').innerHTML = `
+        <div id="close-modal" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4">
+            <div class="bg-white p-6 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" onclick="event.stopPropagation()">
+                <h3 class="font-bold text-lg mb-4">Rincian Lengkap: ${item.colA}</h3>
+                <div class="grid grid-cols-2 gap-3 text-sm">
+                    ${allCols.map(k => `<div><strong>${columnLabels[k]}:</strong> ${item[k] || '-'}</div>`).join('')}
+                </div>
+            </div>
+        </div>
+    `;
+    document.getElementById('close-modal').addEventListener('click', function() {
+        this.remove();
+    });
+}

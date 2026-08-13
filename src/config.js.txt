@@ -1,0 +1,44 @@
+export const firebaseConfig = {
+    databaseURL: "https://prepress-smart-v1-default-rtdb.firebaseio.com/"
+};
+
+export const GOOGLE_SHEET_ID = '1ogvE_rvBK2awjmEpDkWxkjQ_URehd_OscwyGlhYNZJw';
+
+export const jopCategories = {
+    '0': 'K3', '1': 'SCHOOL SUPPLY', '2': 'OFFICE SUPPLY', '3': 'KERTAS SURAT',
+    '4': 'AMPLOP', '5': 'KERTAS KADO', '6': 'OTHERS', '7': 'JASA',
+    '8': 'EXPORT', '9': 'KARTON BOX'
+};
+
+export const departments = ['CTCP', 'CTP', 'SCREEN', 'FLEXO', 'ETCHING'];
+
+export const dbSheets = {
+    'CTCP': 'DB_CTCP', 'CTP': 'DB_CTP', 'SCREEN': 'DB_SCREEN',
+    'FLEXO': 'DB_FLEXO', 'ETCHING': 'DB_ETCHING'
+};
+
+export const deptTerms = {
+    'CTCP': 'Plate', 'CTP': 'Plate', 'SCREEN': 'Screen', 'FLEXO': 'Flexo', 'ETCHING': 'Plate'
+};
+
+export const deptColumns = {
+    'CTCP': ['colA', 'colB', 'colC', 'colD', 'colE', 'colF', 'colG', 'colH', 'colI', 'colJ', 'colK', 'colL', 'colM', 'colN', 'colO', 'colP', 'colQ', 'colR'],
+    'CTP': ['colA', 'colB', 'colC', 'colD', 'colE', 'colF', 'colG', 'colH', 'colI', 'colJ', 'colK', 'colL', 'colM', 'colN', 'colO', 'colP', 'colQ'],
+    'SCREEN': ['colA', 'colB', 'colC', 'colD', 'colE', 'colF', 'colG', 'colH', 'colI', 'colJ', 'colK', 'colL', 'colM', 'colN'],
+    'FLEXO': ['colA', 'colB', 'colC', 'colD', 'colE', 'colF', 'colG', 'colH', 'colI'],
+    'ETCHING': ['colA', 'colB', 'colC', 'colD', 'colE', 'colF', 'colG', 'colH']
+};
+
+export const columnLabels = {
+    colA: 'ID (1)', colB: 'JOP NAME (2)', colC: 'NO JOP (3)', colD: 'NO B (4)',
+    colE: 'TIPE (5)', colF: 'STATUS (6)', colG: 'DATE (7)', colH: 'Jumlah Screen Bagus (8)',
+    colI: 'Jumlah Screen Rusak (9)', colJ: 'Jumlah Screen Ganti (10)', colK: 'Penyebab Rusak (11)',
+    colL: 'Penyebab Ganti (12)', colM: 'SHIFT (13)', colN: 'NAMA OP (14)'
+};
+
+export const state = {
+    userRole: null, username: null,
+    activeMainTab: 'dashboard', activeSubTab: 'SCREEN', 
+    startDate: '2026-08-01', endDate: '2026-08-31',
+    data: [], charts: {}, isFormOpen: false, formMode: 'add', isLoading: false, sidebarOpen: false
+};

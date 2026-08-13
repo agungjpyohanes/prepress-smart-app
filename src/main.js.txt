@@ -1,0 +1,68 @@
+import { firebaseConfig, state, dbSheets } from './config.js';
+import { fetchUsersFromGoogleSheets, fetchSheetFromGoogleSheets } from './api.js';
+import { renderLogin, renderMain, updateContent } from './ui.js';
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+export async function fetchData() {
+    state.isLoading = true;
+    renderMain(); 
+    const sheetName = dbSheets[state.activeSubTab];
+    let sheetData = await fetchSheetFromGoogleSheets(sheetName);
+    if (sheetData && sheetData.length > 0) {
+        state.data = sheetData.sort((a, b) => new Date(a.colG) - new Date(b.colG));
+        state.isLoading = false;
+        updateContent();
+    } else {
+        db.ref(sheetName).once('value').then((snapshot) => {
+            const rawData = snapshot.val();
+            state.data = rawData ? Object.values(rawData).sort((a, b) => new Date(a.colG) - new Date(b.colG)) : [];
+            state.isLoading = false;
+            updateContent();
+        }).catch(() => {
+            state.data = [];
+            state.isLoading = false;
+            updateContent();
+        });
+    }
+}
+
+document.addEventListener('submit', async (e) => {
+    if (e.target && e.target.id === 'login-form') {
+        e.preventDefault();
+        const uInput = document.getElementById('login-username').value.trim();
+        const pInput = document.getElementById('login-password').value.trim();
+        const users = await fetchUsersFromGoogleSheets();
+        const matched = users.find(u => u.user.toLowerCase() === uInput.toLowerCase() && u.pass === pInput);
+        if (matched) {
+            state.username = matched.user;
+            state.userRole = matched.role || 'operator';
+            fetchData();
+        } else {
+            document.getElementById('login-error').classList.remove('hidden');
+        }
+    }
+});
+
+document.addEventListener('click', (e) => {
+    const navBtn = e.target.closest('.nav-btn');
+    if (navBtn) {
+        const mainTab = navBtn.dataset.tab;
+        const subTab = navBtn.dataset.dept;
+        state.activeMainTab = mainTab;
+        if (subTab && state.activeSubTab !== subTab) {
+            state.activeSubTab = subTab;
+            fetchData();
+        } else {
+            renderMain();
+        }
+    }
+    if (e.target.closest('#logout-btn')) {
+        state.userRole = null; 
+        state.username = null; 
+        renderLogin();
+    }
+});
+
+window.onload = renderLogin;
