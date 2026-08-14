@@ -226,7 +226,7 @@ body.sb-open #overlay{display:block}
 <script>
 'use strict';
 /*═══════════════════════════════════════════════════════════════════
-  PREPRESS SMART V 1.1 — STRUKTUR SEGMENT (panduan pengembangan)
+  PREPRESS SMART V 1.0 — STRUKTUR SEGMENT (panduan pengembangan)
   ───────────────────────────────────────────────────────────────────
   SEG-01  KONFIGURASI & KONSTANTA  → Sheet ID, struktur kolom, JOP, form, ikon
   SEG-02  UTILITAS                 → tanggal, angka, esc, toast, count-up
@@ -240,15 +240,15 @@ body.sb-open #overlay{display:block}
   SEG-10  DATA PRODUKSI            → tabel per sheet (sort, cari, klik)
   SEG-11  FORM PERMINTAAN          → link Google Form
   SEG-12  NAVIGASI & ROUTER        → sidebar, view switching
-  SEG-13  PRINT / PDF              → preview + cetak
-  SEG-14  INIT & EVENT BINDING     → startup & listener global
+  ketemu sheet aslinya. Data contoh HANYA dipakai bila file benar-benar
+  tidak dapat diakses (offline total).
 ═══════════════════════════════════════════════════════════════════*/
 
 /* ══════════════════════════════════════════════════════════════════
    SEG-01 · KONFIGURASI & KONSTANTA
    ══════════════════════════════════════════════════════════════════ */
 const SHEET_ID='1ogvE_rvBK2awjmEpDkWxkjQ_URehd_OscwyGlhYNZJw';
-const APPS_SCRIPT_URL=''; /* opsional: URL Web App Apps Script (bisa tulis DB_USER) */
+const APPS_SCRIPT_URL='https://script.google.com/macros/s/AKfycbz61U33S3MhcjSsJ7VAUZSFVYaGk9s4n_eHTgOUEjoY7WokYUbk3Ks_iH1fZ4vOO8xH/exec';
 
 const JOP_CATS=[['0','Sticker Flexo'],['1','School Supply'],['2','Office Supply'],['3','Kertas Surat'],['4','Envelope'],['5','Gift Wrap'],['6','Others'],['7','Jasa'],['8','Export'],['9','Carton Box']];
 const CAT_COLORS=['#06b6d4','#ec4899','#f59e0b','#8b5cf6','#10b981','#f97316','#3b82f6','#84cc16','#ef4444','#64748b'];
